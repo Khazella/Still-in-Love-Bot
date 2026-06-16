@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 32px;
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #0f1117;
+}
+
+.container {
+    background: #171923;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow:
+        0 0 40px rgba(0,0,0,.45),
+        0 12px 40px rgba(0,0,0,.35);
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.header {
+    padding: 36px 40px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.title {
+    font-size: 52px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    color: #b5bfd3;
+    font-size: 22px;
+}
+
+/* =========================
+   PROFILE GRID
+========================= */
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    padding: 32px;
+}
+
+.card {
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 16px;
+    padding: 24px;
+}
+
+.card-title {
+    font-size: 18px;
+    color: #8f98ab;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    font-weight: 700;
+}
+
+.card-value {
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+/* =========================
+   SECTION
+========================= */
+
+.section {
+    padding: 0 32px 36px;
+}
+
+.section-title {
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 28px;
+}
+
+/* =========================
+   FAN HISTORY
+========================= */
+
+.fan-row {
+    margin-bottom: 34px;
+}
+
+.fan-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 38px;
+}
+
+.fan-month {
+    font-weight: 700;
+}
+
+.fan-gain {
+    color: #61b8ff;
+    font-weight: 700;
+}
+
+.progress {
+    width: 100%;
+    height: 30px;
+    background: rgba(255,255,255,.08);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #61b8ff;
+}
+
+.fan-detail {
+    margin-top: 12px;
+    color: #b5bfd3;
+    font-size: 30px;
+    font-weight: 600;
+}
+
+/* =========================
+   CIRCLE HISTORY
+========================= */
+
+.circle-history {
+    background: rgba(255,255,255,.04);
+    border-radius: 16px;
+    padding: 28px;
+}
+
+.circle-entry {
+    margin-bottom: 24px;
+}
+
+.circle-entry:last-child {
+    margin-bottom: 0;
+}
+
+.circle-name {
+    font-size: 38px;
+    font-weight: 700;
+}
+
+.circle-range {
+    margin-top: 8px;
+    color: #b5bfd3;
+    font-size: 28px;
+    line-height: 1.4;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+.footer {
+    border-top: 1px solid rgba(255,255,255,.08);
+    padding: 22px 32px;
+    color: #8f98ab;
+    font-size: 18px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+
+        <div class="title">
+            Screen Report
+        </div>
+
+        <div class="subtitle">
+            Trainer Profile Overview
+        </div>
+
+    </div>
+
+    <div class="profile-grid">
+
+        <div class="card">
+            <div class="card-title">Trainer Name</div>
+            <div class="card-value">{{TRAINER_NAME}}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Trainer ID</div>
+            <div class="card-value">{{TRAINER_ID}}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Current Club</div>
+            <div class="card-value">{{CURRENT_CLUB}}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Shame Score</div>
+            <div class="card-value">{{SHAME_SCORE}}</div>
+        </div>
+
+    </div>
+
+    <div class="section">
+
+        <div class="section-title">
+            Fan History (Latest 6 Months)
+        </div>
+
+        {{FAN_HISTORY}}
+
+    </div>
+
+    <div class="section">
+
+        <div class="section-title">
+            Circle History
+        </div>
+
+        <div class="circle-history">
+            {{CIRCLE_HISTORY}}
+        </div>
+
+    </div>
+
+    <div class="footer">
+        {{FOOTER}}
+    </div>
+
+</div>
+
+</body>
+</html>

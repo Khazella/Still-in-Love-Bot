@@ -1,0 +1,16 @@
+services:
+  discord-bot:
+    build: .
+    container_name: discord-sil-bot
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./:/app
+
+    working_dir: /app
+
+    command: node src/index.js

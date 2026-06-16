@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+
+<style>
+
+body {
+    margin: 0;
+    padding: 30px;
+    background: #111111;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+h1 {
+    margin: 0 0 12px 0;
+}
+
+.description {
+    color: #b9bbbe;
+    margin-bottom: 24px;
+}
+
+.section-title {
+    margin-top: 30px;
+    margin-bottom: 12px;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+    background: #1b1b1b;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+th {
+    background: #202225;
+    color: white;
+    padding: 14px;
+    text-align: center;
+    font-size: 14px;
+}
+
+td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid #2b2b2b;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+.footer {
+    margin-top: 24px;
+    color: #8f98ab;
+    font-size: 14px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>{{TITLE}}</h1>
+
+<div class="description">
+    {{DESCRIPTION}}
+</div>
+
+<div class="section-title">
+    Current Projections
+</div>
+
+<table>
+
+    <thead>
+        <tr>
+            <th>Club Rank</th>
+            <th>Daily</th>
+            <th>Weekly*</th>
+            <th>Monthly*</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {{BENCHMARK_PROJECTIONS}}
+    </tbody>
+
+</table>
+
+<div class="section-title">
+    Weekly Lock Values
+</div>
+
+<table>
+
+    <thead>
+        <tr>
+            <th>Week</th>
+            <th>Top 10</th>
+            <th>Top 30</th>
+            <th>Top 100</th>
+            <th>Top 500</th>
+            <th>Top 1000</th>
+            <th>Top 3000</th>
+            <th>Top 5000</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {{BENCHMARK_WEEKS}}
+    </tbody>
+
+</table>
+
+<div class="footer">
+    {{FOOTER}}
+</div>
+
+</body>
+</html>

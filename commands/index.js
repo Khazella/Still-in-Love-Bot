@@ -21,7 +21,17 @@ module.exports = [
     },
     {
         name: 'update',
-        description: 'Manual refresh uma.moe',
+        description: 'Manual refresh First Data Uma.Moe',
+        options: []
+    },
+    {
+        name: 'update-cm',
+        description: 'Manual refresh CM Data GameTora.com',
+        options: []
+    },
+    {
+        name: 'update-skills',
+        description: 'Manual refresh Skills Data GameTora.com',
         options: []
     },
     {
@@ -52,7 +62,7 @@ module.exports = [
     },
     {
         name: 'anime',
-        description: 'Search for an anime on MyAnimeList',
+        description: 'Search for an anime on Kitsu',
         options: [
             {
                 name: 'title',
@@ -64,7 +74,7 @@ module.exports = [
     },
     {
         name: 'manga',
-        description: 'Search for a manga on MyAnimeList',
+        description: 'Search for a manga on Kitsu',
         options: [
             {
                 name: 'title',
@@ -99,4 +109,17 @@ module.exports = [
             }
         ]
     },
+    {
+        name: 'skill',
+        description: 'Show Uma Musume skill information',
+        options: [
+            {
+            name: 'name',
+            description: 'Skill name',
+            type: 3,
+            required: true,
+            autocomplete: true
+            }
+        ]
+    }
 ];

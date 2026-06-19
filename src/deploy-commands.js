@@ -1,8 +1,23 @@
 require('dotenv').config();
 
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+const {
+    REST,
+    Routes,
+    SlashCommandBuilder
+} = require('discord.js');
 
 const commandConfig = require('../commands');
+
+// =======================================================
+// PRIVATE COMMANDS
+// =======================================================
+// Commands in this list are only deployed
+// to the FIRST guild in GUILD_ID.
+const PRIVATE_COMMANDS = [
+    'update',
+    'update-cm',
+    'update-skills'
+];
 
 // =======================================================
 // BUILD SLASH COMMANDS
@@ -13,7 +28,10 @@ const commands = commandConfig.map(cmd => {
         .setName(cmd.name)
         .setDescription(cmd.description);
 
-    if (cmd.options && Array.isArray(cmd.options)) {
+    if (
+        cmd.options &&
+        Array.isArray(cmd.options)
+    ) {
 
         cmd.options.forEach(option => {
 
@@ -22,9 +40,26 @@ const commands = commandConfig.map(cmd => {
                 opt
                     .setName(option.name)
                     .setDescription(option.description)
-                    .setRequired(option.required || false);
+                    .setRequired(
+                        option.required || false
+                    );
 
-                if (option.choices && Array.isArray(option.choices)) {
+                // =========================
+                // AUTOCOMPLETE SUPPORT
+                // =========================
+                if (
+                    option.autocomplete === true
+                ) {
+                    opt.setAutocomplete(true);
+                }
+
+                // =========================
+                // CHOICES SUPPORT
+                // =========================
+                if (
+                    option.choices &&
+                    Array.isArray(option.choices)
+                ) {
 
                     option.choices.forEach(choice => {
 
@@ -38,6 +73,7 @@ const commands = commandConfig.map(cmd => {
                 }
 
                 return opt;
+
             });
 
         });
@@ -45,57 +81,116 @@ const commands = commandConfig.map(cmd => {
     }
 
     return slash.toJSON();
+
 });
 
-console.log('Commands being registered:');
-console.log(JSON.stringify(commands, null, 2));
+console.log(
+    'Commands being registered:'
+);
+
+console.log(
+    JSON.stringify(
+        commands,
+        null,
+        2
+    )
+);
 
 // =======================================================
 // REST CLIENT
 // =======================================================
-const rest = new REST({ version: '10' })
-    .setToken(process.env.DISCORD_TOKEN);
+const rest = new REST({
+    version: '10'
+}).setToken(
+    process.env.DISCORD_TOKEN
+);
 
 // =======================================================
 // DEPLOY FUNCTION
 // =======================================================
 (async () => {
+
     try {
 
         if (!process.env.GUILD_ID) {
-            throw new Error("GUILD_ID is missing in .env");
+
+            throw new Error(
+                'GUILD_ID is missing in .env'
+            );
+
         }
 
-        const guildIds = process.env.GUILD_ID.split(',');
+        const guildIds =
+            process.env.GUILD_ID
+                .split(',')
+                .map(v => v.trim())
+                .filter(Boolean);
 
-        console.log('Registering GUILD commands...');
+        const primaryGuildId =
+            guildIds[0];
+
+        console.log(
+            'Registering GUILD commands...'
+        );
 
         for (const guildId of guildIds) {
 
-            const trimmedGuildId = guildId.trim();
+            console.log(
+                `Deploying to guild: ${guildId}`
+            );
 
-            if (!trimmedGuildId) continue;
+            let guildCommands =
+                commands;
 
-            console.log(`Deploying to guild: ${trimmedGuildId}`);
+            // =====================================
+            // REMOVE PRIVATE COMMANDS
+            // FROM NON-PRIMARY GUILDS
+            // =====================================
+            if (
+                guildId !== primaryGuildId
+            ) {
+
+                guildCommands =
+                    commands.filter(
+                        command =>
+                            !PRIVATE_COMMANDS.includes(
+                                command.name
+                            )
+                    );
+
+            }
+
+            console.log(
+                `Commands for guild ${guildId}:`,
+                guildCommands.map(
+                    c => c.name
+                )
+            );
 
             await rest.put(
                 Routes.applicationGuildCommands(
                     process.env.CLIENT_ID,
-                    trimmedGuildId
+                    guildId
                 ),
                 {
-                    body: commands
+                    body: guildCommands
                 }
             );
 
         }
 
-        console.log('Commands registered successfully (ALL GUILDS).');
+        console.log(
+            'Commands registered successfully.'
+        );
 
     } catch (error) {
 
-        console.error('Registration failed:');
+        console.error(
+            'Registration failed:'
+        );
+
         console.error(error);
 
     }
+
 })();

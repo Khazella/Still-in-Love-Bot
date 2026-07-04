@@ -19,6 +19,9 @@ const pool = new Pool({
     password: process.env.PG_PASSWORD
 });
 
+const greetingConfigs =
+    require('./config/greetings');
+
 pool.query('SELECT COUNT(*) FROM umamusume_skills')
     .then(result => {
         console.log(
@@ -38,6 +41,7 @@ const { renderTemplate } = require('../services/renderer');
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent
     ]
@@ -45,6 +49,51 @@ const client = new Client({
 
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
+});
+
+client.on('guildMemberUpdate', async (oldMember, newMember) => {
+
+    const addedRoles = newMember.roles.cache.filter(role =>
+        !oldMember.roles.cache.has(role.id)
+    );
+
+    for (const role of addedRoles.values()) {
+
+        const config = greetingConfigs.find(
+            c => c.roleId === role.id
+        );
+
+        if (!config) continue;
+
+        const channel =
+            newMember.guild.channels.cache.get(
+                config.channelId
+            );
+
+        if (!channel) continue;
+
+        const message =
+            config.message
+                .replace('{user}', `${newMember}`)
+                .replace('{username}', newMember.user.username);
+
+        const embed = new EmbedBuilder()
+            .setColor(0xff69b4)
+            .setTitle('🌸 Welcome!')
+            .setDescription(message)
+            .setFooter({
+                text: 'Still in Love'
+            })
+            .setTimestamp();
+
+        await channel.send({
+            embeds: [embed]
+        });
+
+        console.log(
+            `Greeting sent to ${newMember.user.tag} for role ${role.name}`
+        );
+    }
 });
 
 // =========================

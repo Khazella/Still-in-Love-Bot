@@ -19,23 +19,30 @@ function getCurrentGoal(goal) {
         })
     );
 
-    const year = jakartaNow.getFullYear();
-    const month = jakartaNow.getMonth();
+    const currentDay = jakartaNow.getDate();
+
+    // Day 1 = still previous month
+    if (currentDay === 1) {
+
+        const previousMonthDays = new Date(
+            jakartaNow.getFullYear(),
+            jakartaNow.getMonth(),
+            0
+        ).getDate();
+
+        return goal;
+    }
 
     const daysInMonth = new Date(
-        year,
-        month + 1,
+        jakartaNow.getFullYear(),
+        jakartaNow.getMonth() + 1,
         0
     ).getDate();
 
-    const currentDay = jakartaNow.getDate();
+    const dailyTarget =
+        goal / daysInMonth;
 
-    const dailyTarget = goal / daysInMonth;
-
-    return dailyTarget * Math.max(
-        currentDay - 1,
-        1
-    );
+    return dailyTarget * (currentDay - 1);
 }
 
 function getCurrentWeeklyGoal(goal) {

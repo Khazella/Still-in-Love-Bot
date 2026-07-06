@@ -24,7 +24,7 @@ A Discord bot for the Uma Musume community focused on trainer analytics, fan gro
 
 ## Deployment
 
-The bot is self-hosted using Docker and managed through Portainer.
+The bot is self-hosted using Dockerfile build manually as "discord-sil-bot:1.0" and Docker compose managed through Portainer.
 
 ## Notes
 

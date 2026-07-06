@@ -8,7 +8,7 @@ services:
     working_dir: /app
 
     volumes:
-      - /data/local/docker/discord-sil-bot:/app
+      - pathto/discord-sil-bot:/app
 
     init: true
     shm_size: "1gb"

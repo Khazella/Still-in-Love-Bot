@@ -1,28 +1,22 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  discord-sil-bot:
-    image: node:22
-
-    container_name: discord-sil-bot
+  discord-sil-bot-prod:
+    image: discord-sil-bot:1.0
+    container_name: discord-sil-bot-prod
 
     working_dir: /app
 
     volumes:
-      - ./:/app
+      - /data/local/docker/discord-sil-bot:/app
 
     init: true
     shm_size: "1gb"
 
-    env_file:
-      - .env
-
     command: >
       sh -c "
-      apt-get update &&
-      apt-get install -y chromium &&
-      npm install &&
-      node src/index.js
+      chown -R node:node /app &&
+      su node -s /bin/sh -c 'npm install && node src/index.js'
       "
 
     restart: unless-stopped

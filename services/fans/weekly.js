@@ -1,11 +1,12 @@
 const {
-    DAYS_PER_WEEK,
-    KICK_GRACE_DAYS,
-    WEEKLY_FAN_THRESHOLD
-} = require('../../src/config/club-settings');
+    getGoalInfo
+} = require('./goals');
 
-const THRESHOLD_DISPLAY_TEXT =
-    `${(WEEKLY_FAN_THRESHOLD / 1_000_000).toFixed(1)}M`;
+const {
+    CLUB_NAME,
+    DAYS_PER_WEEK,
+    KICK_GRACE_DAYS
+} = require('../../src/config/club-settings');
 
 // =======================================================
 // DATE HELPERS
@@ -106,6 +107,20 @@ function generateWeeklyReport(row) {
             currentWeekIndex,
             dayOfCurrentWeek
         } = getCurrentWeekInfo();
+
+        const goalInfo =
+            getGoalInfo();
+
+        const weeklyGoal =
+            goalInfo.weeklyGoals[
+                currentWeekIndex + 1
+            ];
+
+        const THRESHOLD_DISPLAY_TEXT =
+            `${(
+                weeklyGoal /
+                1_000_000
+                ).toFixed(1)}M`;
 
         const members =
             row.members ||
@@ -304,7 +319,7 @@ function generateWeeklyReport(row) {
 
         return {
             title:
-                `First : Weekly Fan Report — Week ${currentWeekIndex + 1}`,
+                `${CLUB_NAME} : Weekly Fan Report — Week ${currentWeekIndex + 1}`,
 
             description:
                 `Goals: ${THRESHOLD_DISPLAY_TEXT}\n` +

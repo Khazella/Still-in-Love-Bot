@@ -456,13 +456,26 @@ client.on(
 
             console.error(error);
 
+            const localCommands = [
+                'club'
+            ];
+
+            const isLocalCommand =
+                localCommands.includes(
+                    interaction.commandName
+                );
+
             if (
                 interaction.deferred ||
                 interaction.replied
             ) {
+
                 await interaction.editReply(
-                    'Failed to contact n8n workflow.'
+                    isLocalCommand
+                        ? 'Still in Love was too busy chasing you, Trainer-san, and forgot to finish the report. Please try again later.'
+                        : 'Still in Love sent a request to the support team, but nobody answered the phone. Please try again later.'
                 );
+
             }
 
         }

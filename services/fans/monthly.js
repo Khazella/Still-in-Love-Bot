@@ -1,10 +1,11 @@
 const {
-    KICK_GRACE_DAYS,
-    MONTHLY_FAN_THRESHOLD
-} = require('../../src/config/club-settings');
+    getGoalInfo
+} = require('./goals');
 
-const THRESHOLD_LABEL =
-    `${(MONTHLY_FAN_THRESHOLD / 1_000_000).toFixed(1)}M`;
+const {
+    CLUB_NAME,
+    KICK_GRACE_DAYS
+} = require('../../src/config/club-settings');
 
 // ================================
 // HELPERS
@@ -100,6 +101,15 @@ function generateMonthlyReport(
 ) {
 
     try {
+
+        const goalInfo =
+            getGoalInfo();
+
+        const THRESHOLD_LABEL =
+            `${(
+                goalInfo.monthlyGoal /
+                1_000_000
+            ).toFixed(1)}M`;
 
         const members =
             row.members ||
@@ -315,7 +325,7 @@ function generateMonthlyReport(
         return {
 
             title:
-                'First : Monthly Fan Report',
+                `${CLUB_NAME} : Monthly Fan Report`,
 
             description:
                 `Goals: ${THRESHOLD_LABEL}\n` +

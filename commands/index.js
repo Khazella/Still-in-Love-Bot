@@ -15,6 +15,40 @@ module.exports = [
         ]
     },
     {
+        name: 'club',
+        description: 'Club fan report',
+        options: [
+            {
+                name: 'club',
+                description: 'Club name',
+                type: 3, // STRING
+                required: true,
+                choices: [
+                    {
+                        name: 'First',
+                        value: 'First'
+                    }
+                ]
+            },
+            {
+                name: 'period',
+                description: 'Report period',
+                type: 3, // STRING
+                required: true,
+                choices: [
+                    {
+                        name: 'Weekly',
+                        value: 'weekly'
+                    },
+                    {
+                        name: 'Monthly',
+                        value: 'monthly'
+                    }
+                ]
+            }
+        ]
+    },
+    {
         name: 'funfact',
         description: 'Get a random sil fact',
         options: []

@@ -1,0 +1,7 @@
+module.exports = {
+    DAYS_PER_WEEK: 7,
+    KICK_GRACE_DAYS: 1,
+
+    WEEKLY_FAN_THRESHOLD: 17_500_000,
+    MONTHLY_FAN_THRESHOLD: 77_500_000
+};

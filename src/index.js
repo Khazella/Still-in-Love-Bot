@@ -3,6 +3,15 @@ require('dotenv').config();
 const skillsDb =
     require('../services/database/skills');
 
+const clubDb =
+    require('../services/database/club');
+
+const weeklyFans =
+    require('../services/fans/weekly');
+
+const monthlyFans =
+    require('../services/fans/monthly');
+
 const {
     Client,
     GatewayIntentBits,
@@ -312,6 +321,48 @@ client.on(
                     option.value;
             }
 
+            // =========================
+            // LOCAL CLUB COMMAND
+            // =========================
+            if (interaction.commandName === 'club') {
+
+                const latest =
+                    await clubDb.getLatestClubData();
+
+                const report =
+                    options.period === 'weekly'
+                        ? weeklyFans.generateWeeklyReport(latest)
+                        : monthlyFans.generateMonthlyReport(latest);
+
+                const templateName =
+                    options.period === 'weekly'
+                        ? 'fans-weekly'
+                        : 'fans-monthly';
+
+                const imageBuffer =
+                    await renderTemplate(
+                        templateName,
+                        report
+                    );
+
+                const attachment =
+                    new AttachmentBuilder(
+                        imageBuffer,
+                        {
+                            name: `${templateName}.png`
+                        }
+                    );
+
+                await interaction.editReply({
+                    files: [attachment]
+                });
+
+                return;
+            }
+
+            // =========================
+            // N8N COMMANDS
+            // =========================
             const response =
                 await axios.post(
                     process.env.N8N_WEBHOOK,

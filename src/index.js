@@ -1,5 +1,8 @@
 require('dotenv').config();
 
+const skillsDb =
+    require('../services/database/skills');
+
 const {
     Client,
     GatewayIntentBits,
@@ -10,22 +13,15 @@ const {
     ButtonStyle
 } = require('discord.js');
 
-const { Pool } = require('pg');
-const pool = new Pool({
-    host: process.env.PG_HOST,
-    port: process.env.PG_PORT,
-    database: process.env.PG_DATABASE,
-    user: process.env.PG_USER,
-    password: process.env.PG_PASSWORD
-});
+
 
 const greetingConfigs =
     require('./config/greetings');
 
-pool.query('SELECT COUNT(*) FROM umamusume_skills')
-    .then(result => {
+skillsDb.testConnection()
+    .then(count => {
         console.log(
-            `Postgres OK: ${result.rows[0].count} skills`
+            `Postgres OK: ${count} skills`
         );
     })
     .catch(error => {
@@ -263,33 +259,19 @@ client.on(
                     interaction.options.getFocused();
 
                 const result =
-                    await pool.query(
-                        `
-                        SELECT DISTINCT
-                            internal_name_en
-                        FROM umamusume_skills
-                        WHERE
-                            internal_name_en IS NOT NULL
-                            AND internal_name_en <> ''
-                            AND (
-                                internal_name_en ILIKE $1
-                                OR name_en ILIKE $1
-                            )
-                        ORDER BY internal_name_en
-                        LIMIT 25
-                        `,
-                        [`%${focused}%`]
+                    await skillsDb.autocompleteSkills(
+                        focused
                     );
 
                 console.log(
-                    result.rows.map(row => ({
+                    result.map(row => ({
                         name: row.internal_name_en,
                         len: row.internal_name_en?.length
                     }))
                 );
 
                 await interaction.respond(
-                    result.rows.map(row => ({
+                    result.map(row => ({
                         name: row.internal_name_en,
                         value: row.internal_name_en
                     }))

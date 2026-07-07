@@ -1,8 +1,7 @@
-const {
-    WEEKLY_DAILY_GOALS
-} = require('../../src/config/club-settings');
-
-function getGoalInfo(date = new Date()) {
+function getGoalInfo(
+    settings,
+    date = new Date()
+) {
 
     const jakartaNow = new Date(
         date.toLocaleString(
@@ -45,21 +44,28 @@ function getGoalInfo(date = new Date()) {
         4: daysInMonth - 21
     };
 
+    const dailyGoals = {
+        1: Number(settings.week1_daily || 0),
+        2: Number(settings.week2_daily || 0),
+        3: Number(settings.week3_daily || 0),
+        4: Number(settings.week4_daily || 0)
+    };
+
     const weeklyGoals = {
         1:
-            WEEKLY_DAILY_GOALS[1] *
+            dailyGoals[1] *
             weekDays[1],
 
         2:
-            WEEKLY_DAILY_GOALS[2] *
+            dailyGoals[2] *
             weekDays[2],
 
         3:
-            WEEKLY_DAILY_GOALS[3] *
+            dailyGoals[3] *
             weekDays[3],
 
         4:
-            WEEKLY_DAILY_GOALS[4] *
+            dailyGoals[4] *
             weekDays[4]
     };
 
@@ -74,6 +80,7 @@ function getGoalInfo(date = new Date()) {
     return {
         daysInMonth,
         weekDays,
+        dailyGoals,
         weeklyGoals,
         monthlyGoal
     };

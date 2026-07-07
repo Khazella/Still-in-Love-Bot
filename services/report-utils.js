@@ -1,11 +1,11 @@
 function extractGoal(description = '') {
 
     const match = description.match(
-        /Goals:\s*([\d.]+)M/i
+        /Goal:\s*([\d.]+)M/i
     );
 
     if (!match) {
-        return 69000000;
+        return 0;
     }
 
     return Number(match[1]) * 1000000;

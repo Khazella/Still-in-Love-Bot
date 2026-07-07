@@ -1,20 +1,5 @@
 module.exports = [
     {
-        name: 'fans',
-        description: 'First Club Fans Reports',
-        options: [
-            {
-                name: 'period',
-                description: 'Report period',
-                required: true,
-                choices: [
-                    { name: 'weekly', value: 'weekly' },
-                    { name: 'monthly', value: 'monthly' }
-                ]
-            }
-        ]
-    },
-    {
         name: 'club',
         description: 'Club fan report',
         options: [
@@ -153,6 +138,60 @@ module.exports = [
             type: 3,
             required: true,
             autocomplete: true
+            }
+        ]
+    },
+    {
+        name: 'quota-view',
+        description: 'View club quota settings',
+        options: [
+            {
+                name: 'club',
+                description: 'Club name',
+                type: 3, // STRING
+                required: true,
+                choices: [
+                    {
+                        name: 'First',
+                        value: 'First'
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        name: 'quota-set',
+        description: 'Update club quota',
+        options: [
+            {
+                name: 'club',
+                description: 'Club name',
+                type: 3, // STRING
+                required: true,
+                choices: [
+                    {
+                        name: 'First',
+                        value: 'First'
+                    }
+                ]
+            },
+            {
+                name: 'week',
+                description: 'Week number',
+                type: 4,
+                required: true,
+                choices: [
+                    { name: 'Week 1', value: 1 },
+                    { name: 'Week 2', value: 2 },
+                    { name: 'Week 3', value: 3 },
+                    { name: 'Week 4', value: 4 }
+                ]
+            },
+            {
+                name: 'daily',
+                description: 'Daily quota',
+                type: 4,
+                required: true
             }
         ]
     }

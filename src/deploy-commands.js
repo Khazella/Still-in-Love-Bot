@@ -35,7 +35,12 @@ const commands = commandConfig.map(cmd => {
 
         cmd.options.forEach(option => {
 
-            slash.addStringOption(opt => {
+            const addOption =
+                option.type === 4
+                    ? slash.addIntegerOption.bind(slash)
+                    : slash.addStringOption.bind(slash);
+
+            addOption(opt => {
 
                 opt
                     .setName(option.name)
@@ -44,31 +49,24 @@ const commands = commandConfig.map(cmd => {
                         option.required || false
                     );
 
-                // =========================
-                // AUTOCOMPLETE SUPPORT
-                // =========================
                 if (
-                    option.autocomplete === true
+                    option.autocomplete === true &&
+                    option.type !== 4
                 ) {
                     opt.setAutocomplete(true);
                 }
 
-                // =========================
-                // CHOICES SUPPORT
-                // =========================
                 if (
                     option.choices &&
                     Array.isArray(option.choices)
                 ) {
 
-                    option.choices.forEach(choice => {
-
-                        opt.addChoices({
+                    opt.addChoices(
+                        ...option.choices.map(choice => ({
                             name: choice.name,
                             value: choice.value
-                        });
-
-                    });
+                        }))
+                    );
 
                 }
 

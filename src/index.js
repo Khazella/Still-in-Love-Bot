@@ -12,6 +12,13 @@ const weeklyFans =
 const monthlyFans =
     require('../services/fans/monthly');
 
+const clubSettingsDb =
+    require('../services/database/club-settings');
+
+const {
+    getGoalInfo
+} = require('../services/fans/goals');
+
 const {
     Client,
     GatewayIntentBits,
@@ -21,8 +28,6 @@ const {
     ButtonBuilder,
     ButtonStyle
 } = require('discord.js');
-
-
 
 const greetingConfigs =
     require('./config/greetings');
@@ -329,10 +334,21 @@ client.on(
                 const latest =
                     await clubDb.getLatestClubData();
 
+                const settings =
+                    await clubSettingsDb.getClubSettings(
+                        'First'
+                    );
+
                 const report =
                     options.period === 'weekly'
-                        ? weeklyFans.generateWeeklyReport(latest)
-                        : monthlyFans.generateMonthlyReport(latest);
+                        ? weeklyFans.generateWeeklyReport(
+                            latest,
+                            settings
+                        )
+                        : monthlyFans.generateMonthlyReport(
+                            latest,
+                            settings
+                        );
 
                 const templateName =
                     options.period === 'weekly'
@@ -355,6 +371,127 @@ client.on(
 
                 await interaction.editReply({
                     files: [attachment]
+                });
+
+                return;
+            }
+
+            // =========================
+            // LOCAL QUOTA COMMAND
+            // =========================
+
+            if (
+                interaction.commandName ===
+                'quota-view'
+            ) {
+
+                const club =
+                    interaction.options.getString(
+                        'club'
+                    );
+
+                const settings =
+                    await clubSettingsDb.getClubSettings(
+                        club
+                    );
+
+                if (!settings) {
+
+                    await interaction.editReply({
+                        content:
+                            `Club "${club}" not found.`
+                    });
+
+                    return;
+                }
+
+                const goalInfo = getGoalInfo(settings);
+
+                const embed = {
+                    title: `📋 ${settings.display_name} Quotas`,
+                    color: 0xff69b4,
+                    fields: [
+                        {
+                            name: 'Current Quotas',
+                            value:
+                                `Week 1: ${(settings.week1_daily / 1000000).toFixed(1)}M/day → ${(goalInfo.weeklyGoals[1] / 1000000).toFixed(1)}M\n` +
+                                `Week 2: ${(settings.week2_daily / 1000000).toFixed(1)}M/day → ${(goalInfo.weeklyGoals[2] / 1000000).toFixed(1)}M\n` +
+                                `Week 3: ${(settings.week3_daily / 1000000).toFixed(1)}M/day → ${(goalInfo.weeklyGoals[3] / 1000000).toFixed(1)}M\n` +
+                                `Week 4: ${(settings.week4_daily / 1000000).toFixed(1)}M/day → ${(goalInfo.weeklyGoals[4] / 1000000).toFixed(1)}M\n\n` +
+                                `Monthly Goal: ${(goalInfo.monthlyGoal / 1000000).toFixed(1)}M`,
+                            inline: false
+                        }
+                    ]
+                };
+
+                await interaction.editReply({
+                    embeds: [embed]
+                });
+
+                return;
+            }
+
+            if (
+                interaction.commandName ===
+                'quota-set'
+            ) {
+
+                const club =
+                    interaction.options.getString(
+                        'club'
+                    );
+
+                const week =
+                    interaction.options.getInteger(
+                        'week'
+                    );
+
+                const daily =
+                    interaction.options.getInteger(
+                        'daily'
+                    );
+
+                const updated =
+                    await clubSettingsDb.updateWeekGoal(
+                        club,
+                        week,
+                        daily
+                    );
+
+                if (!updated) {
+
+                    await interaction.editReply({
+                        content:
+                            `Club "${club}" not found.`
+                    });
+
+                    return;
+                }
+
+                const embed = {
+                    title: '✅ Quota Updated',
+                    color: 0x57f287,
+                    fields: [
+                        {
+                            name: 'Club',
+                            value: updated.display_name,
+                            inline: true
+                        },
+                        {
+                            name: 'Week',
+                            value: String(week),
+                            inline: true
+                        },
+                        {
+                            name: 'Daily Goal',
+                            value: `${(daily / 1000000).toFixed(1)}M/day`,
+                            inline: false
+                        }
+                    ]
+                };
+
+                await interaction.editReply({
+                    embeds: [embed]
                 });
 
                 return;

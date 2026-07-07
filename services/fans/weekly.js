@@ -2,11 +2,8 @@ const {
     getGoalInfo
 } = require('./goals');
 
-const {
-    CLUB_NAME,
-    DAYS_PER_WEEK,
-    KICK_GRACE_DAYS
-} = require('../../src/config/club-settings');
+const DAYS_PER_WEEK = 7;
+const KICK_GRACE_DAYS = 1;
 
 // =======================================================
 // DATE HELPERS
@@ -99,7 +96,10 @@ function normalizeName(value) {
 // MAIN
 // =======================================================
 
-function generateWeeklyReport(row) {
+function generateWeeklyReport(
+    row,
+    settings
+) {
 
     try {
 
@@ -109,7 +109,7 @@ function generateWeeklyReport(row) {
         } = getCurrentWeekInfo();
 
         const goalInfo =
-            getGoalInfo();
+            getGoalInfo(settings);
 
         const weeklyGoal =
             goalInfo.weeklyGoals[
@@ -120,7 +120,7 @@ function generateWeeklyReport(row) {
             `${(
                 weeklyGoal /
                 1_000_000
-                ).toFixed(1)}M`;
+            ).toFixed(1)}M`;
 
         const members =
             row.members ||
@@ -319,10 +319,10 @@ function generateWeeklyReport(row) {
 
         return {
             title:
-                `${CLUB_NAME} : Weekly Fan Report — Week ${currentWeekIndex + 1}`,
+                `${settings.display_name} : Weekly Fan Report — Week ${currentWeekIndex + 1}`,
 
             description:
-                `Goals: ${THRESHOLD_DISPLAY_TEXT}\n` +
+                `Goal: ${THRESHOLD_DISPLAY_TEXT}\n` +
                 `Monthly Rank: ${circle.monthly_rank ?? '-'}\n` +
                 `Last Month Rank: ${circle.last_month_rank ?? '-'}\n` +
                 `Members: ${filteredMembers.length}/30`,

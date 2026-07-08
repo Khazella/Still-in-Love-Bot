@@ -146,6 +146,11 @@ function generateWeeklyReport(
             row.circle ??
             {};
 
+        const dataSource =
+            row.source ||
+            row.data?.source ||
+            'uma.moe';
+
         const latestUpdate =
             getLatestUpdate(members);
 
@@ -328,11 +333,13 @@ function generateWeeklyReport(
                 `Members: ${filteredMembers.length}/30`,
 
             color: 0xff3b3b,
+            reportType: 'weekly',
+            source: dataSource,
 
             footer:
                 scrapedAtUtc
-                    ? `Data source: uma.moe | Last data updated: ${scrapedAtUtc}`
-                    : 'Data source: uma.moe',
+                    ? `Data source: ${dataSource} | Last data updated: ${scrapedAtUtc}`
+                    : `Data source: ${dataSource}`,
 
             rows
         };
@@ -344,6 +351,7 @@ function generateWeeklyReport(
             description:
                 error.message,
             color: 0xff0000,
+            reportType: 'weekly',
             rows: []
         };
 

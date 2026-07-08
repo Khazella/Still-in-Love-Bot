@@ -133,6 +133,11 @@ function generateMonthlyReport(
             row.circle ??
             {};
 
+        const dataSource =
+            row.source ||
+            row.data?.source ||
+            'uma.moe';
+
         // ================================
         // KEEP ACTIVE MEMBERS ONLY
         // ================================
@@ -332,11 +337,13 @@ function generateMonthlyReport(
                 `Members: ${filteredMembers.length}/30`,
 
             color: 0xff3b3b,
+            reportType: 'monthly',
+            source: dataSource,
 
             footer:
                 scrapedAtUtc
-                    ? `Data source: uma.moe | Last data updated: ${scrapedAtUtc}`
-                    : 'Data source: uma.moe',
+                    ? `Data source: ${dataSource} | Last data updated: ${scrapedAtUtc}`
+                    : `Data source: ${dataSource}`,
 
             rows
 
@@ -349,6 +356,7 @@ function generateMonthlyReport(
             description:
                 error.message,
             color: 0xff0000,
+            reportType: 'monthly',
             rows: []
         };
 

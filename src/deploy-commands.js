@@ -16,7 +16,8 @@ const commandConfig = require('../commands');
 const PRIVATE_COMMANDS = [
     'update',
     'update-cm',
-    'update-skills'
+    'update-skills',
+    'quota-set'
 ];
 
 // =======================================================

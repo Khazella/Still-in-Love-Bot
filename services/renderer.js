@@ -67,6 +67,8 @@ async function renderTemplate(
     data
 ) {
 
+    console.log('Renderer source:', data.source);
+
     const templatePath = path.join(
         __dirname,
         '..',
@@ -89,8 +91,13 @@ async function renderTemplate(
         )
     );
 
+    const isChrono =
+        data.source === 'chronogenesis.net';
+
     const backgroundImage = loadAsset(
-        'backgrounds/Still_in_Love_aahn.jpg'
+        isChrono
+            ? 'backgrounds/Still_In_Love_Wallpaper.jpg'
+            : 'backgrounds/Still_in_Love_aahn.jpg'
     );
 
     html = html.replace(
@@ -308,7 +315,7 @@ async function renderTemplate(
     );
 
     const currentGoal =
-        templateName === 'fans-weekly'
+        data.reportType === 'weekly'
             ? getCurrentWeeklyGoal(goal)
             : getCurrentGoal(goal);
 

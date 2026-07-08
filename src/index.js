@@ -334,6 +334,8 @@ client.on(
                 const latest =
                     await clubDb.getLatestClubData();
 
+                latest.source = 'uma.moe';
+
                 const settings =
                     await clubSettingsDb.getClubSettings(
                         'First'
@@ -350,10 +352,57 @@ client.on(
                             settings
                         );
 
-                const templateName =
+                const templateName = 'club';
+
+                const imageBuffer =
+                    await renderTemplate(
+                        templateName,
+                        report
+                    );
+
+                const attachment =
+                    new AttachmentBuilder(
+                        imageBuffer,
+                        {
+                            name: `${templateName}.png`
+                        }
+                    );
+
+                await interaction.editReply({
+                    files: [attachment]
+                });
+
+                return;
+            }
+
+            // =========================
+            // LOCAL CHRONOGENESIS COMMAND
+            // =========================
+
+            if (interaction.commandName === 'chrono') {
+
+                const latest =
+                    await clubDb.getLatestChronoData();
+
+                latest.source = 'chronogenesis.net';
+
+                const settings =
+                    await clubSettingsDb.getClubSettings(
+                        'First'
+                    );
+
+                const report =
                     options.period === 'weekly'
-                        ? 'fans-weekly'
-                        : 'fans-monthly';
+                        ? weeklyFans.generateWeeklyReport(
+                            latest,
+                            settings
+                        )
+                        : monthlyFans.generateMonthlyReport(
+                            latest,
+                            settings
+                        );
+
+                const templateName = 'club';
 
                 const imageBuffer =
                     await renderTemplate(

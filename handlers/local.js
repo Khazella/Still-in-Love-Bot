@@ -44,6 +44,7 @@ async function handleLocalCommand(
     client
 ) {
 
+    await interaction.deferReply();
     const options = {};
 
     for (

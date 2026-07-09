@@ -6,11 +6,20 @@ const skillsDb =
 const clubDb =
     require('../services/database/club');
 
+const trainerDb =
+    require('../services/database/trainer');
+
 const weeklyFans =
     require('../services/fans/weekly');
 
+const weeklyTrainer =
+    require('../services/trainer/weekly');
+
 const monthlyFans =
     require('../services/fans/monthly');
+
+const monthlyTrainer =
+    require('../services/trainer/monthly');
 
 const clubSettingsDb =
     require('../services/database/club-settings');
@@ -161,16 +170,6 @@ function normalizeN8nResponse(raw) {
 // IMAGE COMMANDS
 // =========================
 const IMAGE_COMMANDS = {
-    fans: options =>
-        options.period === 'weekly'
-            ? 'fans-weekly'
-            : 'fans-monthly',
-
-    trainer: options =>
-        options.period === 'weekly'
-            ? 'trainer-weekly'
-            : 'trainer-monthly',
-
     benchmark: () =>
         'benchmark',
 
@@ -426,6 +425,65 @@ client.on(
             }
 
             // =========================
+            // LOCAL TRAINER COMMAND
+            // =========================
+
+            if (interaction.commandName === 'trainer') {
+
+                const trainer =
+                    await trainerDb.getTrainer(
+                        options.name
+                    );
+
+                if (!trainer) {
+
+                    await interaction.editReply(
+                        `Trainer "${options.name}" not found.`
+                    );
+
+                    return;
+
+                }
+
+                const settings =
+                    await clubSettingsDb.getClubSettings(
+                        'First'
+                    );
+
+                const report =
+                    options.period === 'weekly'
+                        ? weeklyTrainer.generateWeeklyReport(
+                            trainer,
+                            settings
+                        )
+                        : monthlyTrainer.generateMonthlyReport(
+                            trainer,
+                            settings
+                        );
+
+                const imageBuffer =
+                    await renderTemplate(
+                        'trainer',
+                        report
+                    );
+
+                const attachment =
+                    new AttachmentBuilder(
+                        imageBuffer,
+                        {
+                            name: 'trainer.png'
+                        }
+                    );
+
+                await interaction.editReply({
+                    files: [attachment]
+                });
+
+                return;
+
+            }
+
+            // =========================
             // LOCAL QUOTA COMMAND
             // =========================
 
@@ -643,7 +701,11 @@ client.on(
             console.error(error);
 
             const localCommands = [
-                'club'
+                'club',
+                'chrono',
+                'trainer',
+                'quota-view',
+                'quota-set'
             ];
 
             const isLocalCommand =

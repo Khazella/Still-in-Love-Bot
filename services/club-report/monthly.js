@@ -1,93 +1,16 @@
 const {
-    getGoalInfo
-} = require('./goals');
+    getQuotaInfo
+} = require('../calculations/quota');
 
-const KICK_GRACE_DAYS = 1;
+const {
+    getLatestUpdate,
+    isMemberKicked,
+    normalizeName
+} = require('../calculations/helpers');
 
-// ================================
-// HELPERS
-// ================================
-
-function normalizeName(str) {
-
-    return String(str)
-        .normalize('NFKC')
-        .trim();
-
-}
-
-function isMemberKicked(
-    member,
-    latestUpdate
-) {
-
-    if (!member?.last_updated) {
-        return false;
-    }
-
-    const lastUpdate =
-        new Date(
-            member.last_updated
-        ).getTime();
-
-    const graceMs =
-        KICK_GRACE_DAYS *
-        24 *
-        60 *
-        60 *
-        1000;
-
-    return (
-        lastUpdate + graceMs <
-        latestUpdate
-    );
-
-}
-
-// ================================
-// GET ACTIVE MONTH DATA
-// ================================
-
-function getActiveMonthData(
-    daily
-) {
-
-    if (
-        !Array.isArray(daily) ||
-        daily.length < 2
-    ) {
-        return [];
-    }
-
-    let lastActiveIndex = -1;
-
-    for (
-        let i = daily.length - 1;
-        i >= 0;
-        i--
-    ) {
-
-        if (
-            (Number(daily[i]) || 0) > 0
-        ) {
-
-            lastActiveIndex = i;
-            break;
-
-        }
-
-    }
-
-    if (lastActiveIndex < 1) {
-        return [];
-    }
-
-    return daily.slice(
-        0,
-        lastActiveIndex + 1
-    );
-
-}
+const {
+    calculateMonthlyStats
+} = require('../calculations/monthly');
 
 // ================================
 // MAIN
@@ -100,12 +23,12 @@ function generateMonthlyReport(
 
     try {
 
-        const goalInfo =
-            getGoalInfo(settings);
+        const quotaInfo =
+            getQuotaInfo(settings);
 
         const THRESHOLD_LABEL =
             `${(
-                goalInfo.monthlyGoal /
+                quotaInfo.monthlyGoal /
                 1_000_000
             ).toFixed(1)}M`;
 
@@ -143,18 +66,11 @@ function generateMonthlyReport(
         // ================================
 
         const latestUpdate =
-            Math.max(
-                ...members
-                    .filter(
-                        member =>
-                            member?.last_updated
-                    )
-                    .map(
-                        member =>
-                            new Date(
-                                member.last_updated
-                            ).getTime()
-                    )
+            getLatestUpdate(
+                members.filter(
+                    member =>
+                        member?.last_updated
+                )
             );
 
         const filteredMembers =
@@ -194,54 +110,23 @@ function generateMonthlyReport(
                 continue;
             }
 
-            const activeData =
-                getActiveMonthData(
-                    daily
-                );
+            let stats;
 
-            if (
-                activeData.length < 2
-            ) {
+            try {
+
+                stats =
+                    calculateMonthlyStats(
+                        daily
+                    );
+
+            } catch {
+
                 continue;
-            }
-
-            let totalGain = 0;
-
-            for (
-                let i = 1;
-                i < activeData.length;
-                i++
-            ) {
-
-                const today =
-                    Number(
-                        activeData[i]
-                    ) || 0;
-
-                const prev =
-                    Number(
-                        activeData[i - 1]
-                    ) || 0;
-
-                if (
-                    today <= 0 ||
-                    prev <= 0
-                ) {
-                    continue;
-                }
-
-                const gain =
-                    today - prev;
-
-                if (gain <= 0) {
-                    continue;
-                }
-
-                totalGain += gain;
 
             }
 
             monthlyResults.push({
+
                 memberName:
                     normalizeName(
                         member.trainer_name ||
@@ -250,16 +135,14 @@ function generateMonthlyReport(
                     ),
 
                 fan_gain:
-                    totalGain,
+                    stats.totalGain,
 
                 dayCount:
-                    Math.max(
-                        1,
-                        activeData.length - 1
-                    ),
+                    stats.activeDays,
 
                 shame_score:
                     member.shame_score ?? 0
+
             });
 
         }
@@ -302,6 +185,7 @@ function generateMonthlyReport(
                             : 0;
 
                     return {
+
                         rank:
                             index + 1,
 
@@ -316,6 +200,7 @@ function generateMonthlyReport(
 
                         shame:
                             r.shame_score
+
                     };
 
                 }
@@ -337,8 +222,12 @@ function generateMonthlyReport(
                 `Members: ${filteredMembers.length}/30`,
 
             color: 0xff3b3b,
-            reportType: 'monthly',
-            source: dataSource,
+
+            reportType:
+                'monthly',
+
+            source:
+                dataSource,
 
             footer:
                 scrapedAtUtc
@@ -352,12 +241,19 @@ function generateMonthlyReport(
     } catch (error) {
 
         return {
+
             title: 'Error',
+
             description:
                 error.message,
+
             color: 0xff0000,
-            reportType: 'monthly',
+
+            reportType:
+                'monthly',
+
             rows: []
+
         };
 
     }

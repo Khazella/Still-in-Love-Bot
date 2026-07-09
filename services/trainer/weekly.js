@@ -1,43 +1,14 @@
 const {
-    getGoalInfo
-} = require('../fans/goals');
+    getQuotaInfo
+} = require('../calculations/quota');
 
-const DAYS_PER_WEEK = 7;
+const {
+    getCurrentWeekInfo
+} = require('../calculations/helpers');
 
-function getCurrentWeekInfo() {
-
-    const jakartaNow = new Date(
-        new Date().toLocaleString(
-            'en-US',
-            {
-                timeZone: 'Asia/Jakarta'
-            }
-        )
-    );
-
-    const effectiveDay =
-        Math.max(
-            1,
-            jakartaNow.getDate() - 1
-        );
-
-    const currentWeekIndex =
-        Math.floor(
-            (effectiveDay - 1) /
-            DAYS_PER_WEEK
-        );
-
-    const dayOfCurrentWeek =
-        ((effectiveDay - 1) %
-            DAYS_PER_WEEK) + 1;
-
-    return {
-        effectiveDay,
-        currentWeekIndex,
-        dayOfCurrentWeek
-    };
-
-}
+const {
+    calculateWeeklyStats
+} = require('../calculations/weekly');
 
 function generateWeeklyReport(
     row,
@@ -59,17 +30,18 @@ function generateWeeklyReport(
             row.scraped_at_utc ??
             null;
 
-        const {
-            effectiveDay,
-            currentWeekIndex,
-            dayOfCurrentWeek
-        } = getCurrentWeekInfo();
+        const weekInfo =
+            getCurrentWeekInfo();
 
-        const goalInfo =
-            getGoalInfo(settings);
+        const {
+            currentWeekIndex
+        } = weekInfo;
+
+        const quotaInfo =
+            getQuotaInfo(settings);
 
         const weeklyGoal =
-            goalInfo.weeklyGoals[
+            quotaInfo.weeklyGoals[
                 currentWeekIndex + 1
             ] || 0;
 
@@ -79,158 +51,20 @@ function generateWeeklyReport(
                 1_000_000
             ).toFixed(1)}M`;
 
-        const dailyTotals =
-            Array.isArray(
-                member.daily_fans
-            )
-                ? member.daily_fans
-                : [];
-
-        const activeData =
-            dailyTotals.slice(
-                0,
-                Math.min(
-                    effectiveDay + 1,
-                    dailyTotals.length
-                )
+        const stats =
+            calculateWeeklyStats(
+                member.daily_fans,
+                weekInfo
             );
-
-        const weeklyTotals = [];
-
-        for (
-            let i = 1;
-            i < activeData.length;
-            i++
-        ) {
-
-            const today =
-                Number(
-                    activeData[i]
-                ) || 0;
-
-            const yesterday =
-                Number(
-                    activeData[i - 1]
-                ) || 0;
-
-            if (
-                today === 0 &&
-                yesterday === 0
-            ) {
-                continue;
-            }
-
-            if (
-                today <= 0 ||
-                yesterday <= 0
-            ) {
-                continue;
-            }
-
-            if (
-                today < yesterday
-            ) {
-                continue;
-            }
-
-            const gain =
-                today - yesterday;
-
-            if (gain <= 0) {
-                continue;
-            }
-
-            const weekIndex =
-                Math.floor(
-                    (i - 1) /
-                    DAYS_PER_WEEK
-                );
-
-            weeklyTotals[
-                weekIndex
-            ] =
-                (
-                    weeklyTotals[
-                        weekIndex
-                    ] || 0
-                ) + gain;
-
-        }
-
-        const weeklyGain =
-            weeklyTotals[
-                currentWeekIndex
-            ] || 0;
-
-        const dailyAverage =
-            weeklyGain > 0
-                ? Math.round(
-                    weeklyGain /
-                    Math.max(
-                        1,
-                        dayOfCurrentWeek
-                    )
-                )
-                : 0;
 
         const quotaPercent =
             weeklyGoal > 0
                 ? (
-                    weeklyGain /
+                    stats.weeklyGain /
                     weeklyGoal *
                     100
                 ).toFixed(2)
                 : '0.00';
-
-        const weekStartDay =
-            currentWeekIndex *
-            DAYS_PER_WEEK;
-
-        const chartSource =
-            dailyTotals.slice(
-                weekStartDay,
-                Math.min(
-                    weekStartDay +
-                    dayOfCurrentWeek +
-                    1,
-                    dailyTotals.length
-                )
-            );
-
-        const chart = [];
-
-        for (
-            let i = 1;
-            i < chartSource.length;
-            i++
-        ) {
-
-            const today =
-                Number(
-                    chartSource[i]
-                ) || 0;
-
-            const yesterday =
-                Number(
-                    chartSource[i - 1]
-                ) || 0;
-
-            if (
-                today <= 0 ||
-                yesterday <= 0 ||
-                today < yesterday
-            ) {
-
-                chart.push(0);
-                continue;
-
-            }
-
-            chart.push(
-                today - yesterday
-            );
-
-        }
 
         return {
 
@@ -257,14 +91,14 @@ function generateWeeklyReport(
                         'Weekly Fans',
 
                     value:
-                        weeklyGain.toLocaleString()
+                        stats.weeklyGain.toLocaleString()
                 },
                 {
                     name:
                         'Daily Average',
 
                     value:
-                        dailyAverage.toLocaleString()
+                        stats.dailyAverage.toLocaleString()
                 },
                 {
                     name:
@@ -284,7 +118,8 @@ function generateWeeklyReport(
                 }
             ],
 
-            chart
+            chart:
+                stats.chart
 
         };
 

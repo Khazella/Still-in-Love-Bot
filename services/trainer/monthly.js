@@ -1,51 +1,10 @@
 const {
-    getGoalInfo
-} = require('../fans/goals');
+    getQuotaInfo
+} = require('../calculations/quota');
 
-// ===================================
-// GET ACTIVE MONTH DATA
-// ===================================
-
-function getActiveMonthData(
-    daily
-) {
-
-    if (
-        !Array.isArray(daily) ||
-        daily.length < 2
-    ) {
-        return [];
-    }
-
-    let lastActiveIndex = -1;
-
-    for (
-        let i = daily.length - 1;
-        i >= 0;
-        i--
-    ) {
-
-        if (
-            (Number(daily[i]) || 0) > 0
-        ) {
-
-            lastActiveIndex = i;
-            break;
-
-        }
-
-    }
-
-    if (lastActiveIndex < 1) {
-        return [];
-    }
-
-    return daily.slice(
-        0,
-        lastActiveIndex + 1
-    );
-
-}
+const {
+    calculateMonthlyStats
+} = require('../calculations/monthly');
 
 // ===================================
 // MAIN
@@ -71,11 +30,11 @@ function generateMonthlyReport(
             row.scraped_at_utc ??
             null;
 
-        const goalInfo =
-            getGoalInfo(settings);
+        const quotaInfo =
+            getQuotaInfo(settings);
 
         const monthlyGoal =
-            goalInfo.monthlyGoal || 0;
+            quotaInfo.monthlyGoal || 0;
 
         const thresholdLabel =
             `${(
@@ -83,137 +42,15 @@ function generateMonthlyReport(
                 1_000_000
             ).toFixed(1)}M`;
 
-        const daily =
-            Array.isArray(
+        const stats =
+            calculateMonthlyStats(
                 member.daily_fans
-            )
-                ? member.daily_fans
-                : [];
-
-        // =========================
-        // ACTIVE MONTH DATA
-        // =========================
-
-        const activeData =
-            getActiveMonthData(
-                daily
             );
-
-        if (
-            activeData.length < 2
-        ) {
-
-            throw new Error(
-                'No monthly data available'
-            );
-
-        }
-
-        const activeDays =
-            Math.max(
-                1,
-                activeData.length - 1
-            );
-
-        // =========================
-        // TOTAL MONTHLY GAIN
-        // =========================
-
-        let totalGain = 0;
-
-        for (
-            let i = 1;
-            i < activeData.length;
-            i++
-        ) {
-
-            const today =
-                Number(
-                    activeData[i]
-                ) || 0;
-
-            const yesterday =
-                Number(
-                    activeData[i - 1]
-                ) || 0;
-
-            if (
-                today <= 0 ||
-                yesterday <= 0
-            ) {
-                continue;
-            }
-
-            const gain =
-                today - yesterday;
-
-            if (gain <= 0) {
-                continue;
-            }
-
-            totalGain += gain;
-
-        }
-
-        // =========================
-        // CHART
-        // =========================
-
-        const chart = [];
-
-        for (
-            let i = 1;
-            i < activeData.length;
-            i++
-        ) {
-
-            const today =
-                Number(
-                    activeData[i]
-                ) || 0;
-
-            const yesterday =
-                Number(
-                    activeData[i - 1]
-                ) || 0;
-
-            if (
-                today <= 0 ||
-                yesterday <= 0
-            ) {
-
-                chart.push(0);
-                continue;
-
-            }
-
-            const gain =
-                today - yesterday;
-
-            chart.push(
-                gain > 0
-                    ? gain
-                    : 0
-            );
-
-        }
-
-        // =========================
-        // STATS
-        // =========================
-
-        const dailyAverage =
-            totalGain > 0
-                ? Math.round(
-                    totalGain /
-                    activeDays
-                )
-                : 0;
 
         const quotaPercent =
             monthlyGoal > 0
                 ? (
-                    totalGain /
+                    stats.totalGain /
                     monthlyGoal *
                     100
                 ).toFixed(2)
@@ -248,14 +85,14 @@ function generateMonthlyReport(
                         'Monthly Fans',
 
                     value:
-                        totalGain.toLocaleString()
+                        stats.totalGain.toLocaleString()
                 },
                 {
                     name:
                         'Daily Average',
 
                     value:
-                        dailyAverage.toLocaleString()
+                        stats.dailyAverage.toLocaleString()
                 },
                 {
                     name:
@@ -275,7 +112,8 @@ function generateMonthlyReport(
                 }
             ],
 
-            chart
+            chart:
+                stats.chart
 
         };
 

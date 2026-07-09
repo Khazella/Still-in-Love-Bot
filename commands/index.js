@@ -1,6 +1,6 @@
 module.exports = [
     {
-        name: 'club',
+        name: 'club-report',
         description: 'Club fan report from Uma.moe',
         options: [
             {

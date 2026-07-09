@@ -10,13 +10,13 @@ const trainerDb =
     require('../services/database/trainer');
 
 const weeklyFans =
-    require('../services/fans/weekly');
+    require('../services/club-report/weekly');
 
 const weeklyTrainer =
     require('../services/trainer/weekly');
 
 const monthlyFans =
-    require('../services/fans/monthly');
+    require('../services/club-report/monthly');
 
 const monthlyTrainer =
     require('../services/trainer/monthly');
@@ -25,8 +25,8 @@ const clubSettingsDb =
     require('../services/database/club-settings');
 
 const {
-    getGoalInfo
-} = require('../services/fans/goals');
+    getQuotaInfo
+} = require('../services/calculations/quota');
 
 const {
     Client,
@@ -328,7 +328,7 @@ client.on(
             // =========================
             // LOCAL CLUB COMMAND
             // =========================
-            if (interaction.commandName === 'club') {
+            if (interaction.commandName === 'club-report') {
 
                 const latest =
                     await clubDb.getLatestClubData();
@@ -512,7 +512,7 @@ client.on(
                     return;
                 }
 
-                const goalInfo = getGoalInfo(settings);
+                const goalInfo = getQuotaInfo(settings);
 
                 const embed = {
                     title: `📋 ${settings.display_name} Quotas`,

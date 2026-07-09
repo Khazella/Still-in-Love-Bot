@@ -1,4 +1,4 @@
-function getGoalInfo(
+function getQuotaInfo(
     settings,
     date = new Date()
 ) {
@@ -87,5 +87,5 @@ function getGoalInfo(
 }
 
 module.exports = {
-    getGoalInfo
+    getQuotaInfo
 };

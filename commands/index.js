@@ -56,10 +56,6 @@ module.exports = [
                 required: true,
                 choices: [
                     {
-                        name: 'Weekly',
-                        value: 'weekly'
-                    },
-                    {
                         name: 'Monthly',
                         value: 'monthly'
                     }

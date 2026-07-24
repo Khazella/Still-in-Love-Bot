@@ -321,8 +321,6 @@ async function handleWebhookCommand(
 
             'club-report',
 
-            'chrono',
-
             'trainer',
 
             'quota-view',

@@ -1,7 +1,7 @@
 module.exports = [
     {
         name: 'club-report',
-        description: 'Club fan report from Uma.moe',
+        description: 'Club fan report',
         options: [
             {
                 name: 'club',
@@ -30,34 +30,20 @@ module.exports = [
                         value: 'monthly'
                     }
                 ]
-            }
-        ]
-    },
-    {
-        name: 'chrono',
-        description: 'Club fan report from Chronogenesis',
-        options: [
-            {
-                name: 'club',
-                description: 'Club name',
-                type: 3, // STRING
-                required: true,
-                choices: [
-                    {
-                        name: 'First',
-                        value: 'First'
-                    }
-                ]
             },
             {
-                name: 'period',
-                description: 'Report period',
+                name: 'source',
+                description: 'Data source',
                 type: 3, // STRING
                 required: true,
                 choices: [
                     {
-                        name: 'Monthly',
-                        value: 'monthly'
+                        name: 'Uma.moe',
+                        value: 'uma'
+                    },
+                    {
+                        name: 'Chronogenesis.net',
+                        value: 'chrono'
                     }
                 ]
             }
@@ -90,7 +76,7 @@ module.exports = [
     },
     {
         name: 'trainer',
-        description: 'Trainer fan report',
+        description: 'Trainer fans report',
         options: [
             {
                 name: 'period',
@@ -106,6 +92,22 @@ module.exports = [
                 description: 'Trainer name',
                 required: true,
                 type: 3   // 3 = STRING
+            },
+            {
+                name: 'source',
+                description: 'Data source',
+                type: 3, // STRING
+                required: true,
+                choices: [
+                    {
+                        name: 'Uma.moe',
+                        value: 'uma'
+                    },
+                    {
+                        name: 'Chronogenesis.net',
+                        value: 'chrono'
+                    }
+                ]
             }
         ]
     },

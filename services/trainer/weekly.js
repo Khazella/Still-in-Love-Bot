@@ -30,6 +30,13 @@ function generateWeeklyReport(
             row.scraped_at_utc ??
             null;
 
+        const dataSource =
+            row.source ??
+            'uma.moe';
+
+        const isChrono =
+            dataSource === 'chronogenesis.net';
+
         const weekInfo =
             getCurrentWeekInfo();
 
@@ -66,6 +73,28 @@ function generateWeeklyReport(
                 ).toFixed(2)
                 : '0.00';
 
+        const fields = [
+            {
+                name: 'Weekly Fans',
+                value: stats.weeklyGain.toLocaleString()
+            },
+            {
+                name: 'Daily Average',
+                value: stats.dailyAverage.toLocaleString()
+            },
+            {
+                name: 'Goal Progress',
+                value: `${quotaPercent}%`
+            }
+        ];
+
+        if (!isChrono) {
+            fields.push({
+                name: 'Shame Score',
+                value: String(member.shame_score ?? 0)
+            });
+        }
+
         return {
 
             title:
@@ -82,41 +111,10 @@ function generateWeeklyReport(
 
             footer:
                 scrapedAtUtc
-                    ? `Data source: uma.moe | Last data updated: ${scrapedAtUtc}`
-                    : 'Data source: uma.moe',
+                    ? `Data source: ${dataSource} | Last data updated: ${scrapedAtUtc}`
+                    : `Data source: ${dataSource}`,
 
-            fields: [
-                {
-                    name:
-                        'Weekly Fans',
-
-                    value:
-                        stats.weeklyGain.toLocaleString()
-                },
-                {
-                    name:
-                        'Daily Average',
-
-                    value:
-                        stats.dailyAverage.toLocaleString()
-                },
-                {
-                    name:
-                        'Goal Progress',
-
-                    value:
-                        `${quotaPercent}%`
-                },
-                {
-                    name:
-                        'Shame Score',
-
-                    value:
-                        String(
-                            member.shame_score ?? 0
-                        )
-                }
-            ],
+            fields,
 
             chart:
                 stats.chart

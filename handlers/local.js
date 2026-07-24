@@ -1,6 +1,5 @@
 const LOCAL_COMMANDS = new Set([
     'club-report',
-    'chrono',
     'trainer',
     'quota-view',
     'quota-set'
@@ -59,72 +58,21 @@ async function handleLocalCommand(
     // LOCAL CLUB COMMAND
     // =========================
 
-    if (
-        interaction.commandName ===
-        'club-report'
-    ) {
+    if (interaction.commandName === 'club-report') {
+
+        const source = options.source || 'uma';
 
         const latest =
-            await clubDb.getLatestClubData();
-
-        latest.source = 'uma.moe';
-
-        const settings =
-            await clubSettingsDb.getClubSettings(
-                'First'
-            );
-
-        const report =
-            options.period === 'weekly'
-                ? weeklyFans.generateWeeklyReport(
-                    latest,
-                    settings
-                )
-                : monthlyFans.generateMonthlyReport(
-                    latest,
-                    settings
-                );
-
-        const imageBuffer =
-            await renderTemplate(
-                'club',
-                report
-            );
-
-        const attachment =
-            new AttachmentBuilder(
-                imageBuffer,
-                {
-                    name: 'club.png'
-                }
-            );
-
-        await interaction.editReply({
-            files: [attachment]
-        });
-
-        return;
-
-    }
-
-    // =========================
-    // LOCAL CHRONOGENESIS COMMAND
-    // =========================
-
-    if (
-        interaction.commandName ===
-        'chrono'
-    ) {
-
-        const latest =
-            await clubDb.getLatestChronoData();
+            await clubDb.getLatestClubData(source);
 
         latest.source =
-            'chronogenesis.net';
+            source === 'chrono'
+                ? 'chronogenesis.net'
+                : 'uma.moe';
 
         const settings =
             await clubSettingsDb.getClubSettings(
-                'First'
+                options.club
             );
 
         const report =
@@ -169,9 +117,13 @@ async function handleLocalCommand(
         'trainer'
     ) {
 
+        const source =
+            options.source || 'uma';
+
         const trainer =
             await trainerDb.getTrainer(
-                options.name
+                options.name,
+                source
             );
 
         if (!trainer) {
@@ -183,6 +135,11 @@ async function handleLocalCommand(
             return;
 
         }
+
+        trainer.source =
+            source === 'chrono'
+                ? 'chronogenesis.net'
+                : 'uma.moe';
 
         const settings =
             await clubSettingsDb.getClubSettings(

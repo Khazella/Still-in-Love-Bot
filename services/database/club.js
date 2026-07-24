@@ -1,25 +1,22 @@
 const pool = require('./postgres');
 
-async function getLatestClubData() {
+const TABLES = {
+    uma: 'uma_circle_latest',
+    chrono: 'chrono_circle_latest'
+};
+
+async function getLatestClubData(source = 'uma') {
+
+    const table =
+        TABLES[source] ||
+        TABLES.uma;
+
     const result = await pool.query(`
         SELECT
             circle_id,
             scraped_at,
             data
-        FROM uma_circle_latest
-        LIMIT 1
-    `);
-
-    return result.rows[0];
-}
-
-async function getLatestChronoData() {
-    const result = await pool.query(`
-        SELECT
-            circle_id,
-            scraped_at,
-            data
-        FROM chrono_circle_latest
+        FROM ${table}
         LIMIT 1
     `);
 
@@ -27,6 +24,5 @@ async function getLatestChronoData() {
 }
 
 module.exports = {
-    getLatestClubData,
-    getLatestChronoData
+    getLatestClubData
 };

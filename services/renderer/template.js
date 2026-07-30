@@ -9,10 +9,6 @@ const {
     loadAsset
 } = require('../asset-loader');
 
-const {
-    getRankIconFile
-} = require('../report-utils');
-
 /**
  * Read an HTML template file from the templates directory.
  *
@@ -37,22 +33,16 @@ function loadTemplateHtml(templateName) {
 }
 
 /**
- * Load character icon, rank icon, and background image as
+ * Load character icon and background image as
  * base64 data URIs based on the report data.
  *
  * @param {object} data - report data
- * @returns {{ airGrooveIcon: string, rankIcon: string, backgroundImage: string }}
+ * @returns {{ airGrooveIcon: string, backgroundImage: string }}
  */
 function resolveTemplateAssets(data) {
 
     const airGrooveIcon = loadAsset(
         'chr_icon_still_in_love.png'
-    );
-
-    const rankIcon = loadAsset(
-        getRankIconFile(
-            data.description || ''
-        )
     );
 
     const isChrono =
@@ -66,18 +56,17 @@ function resolveTemplateAssets(data) {
 
     return {
         airGrooveIcon,
-        rankIcon,
         backgroundImage
     };
 
 }
 
 /**
- * Replace asset placeholders (CHARACTER_ICON, RANK_ICON,
- * BACKGROUND_IMAGE) with the corresponding base64 data URIs.
+ * Replace asset placeholders (CHARACTER_ICON, BACKGROUND_IMAGE)
+ * with the corresponding base64 data URIs.
  *
  * @param {string} html - template HTML
- * @param {{ airGrooveIcon: string, rankIcon: string, backgroundImage: string }} assets
+ * @param {{ airGrooveIcon: string, backgroundImage: string }} assets
  * @returns {string} HTML with placeholders replaced
  */
 function replaceAssetPlaceholders(html, assets) {
@@ -85,11 +74,6 @@ function replaceAssetPlaceholders(html, assets) {
     html = html.replace(
         '{{CHARACTER_ICON}}',
         assets.airGrooveIcon
-    );
-
-    html = html.replace(
-        '{{RANK_ICON}}',
-        assets.rankIcon
     );
 
     html = html.replace(

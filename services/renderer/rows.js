@@ -1,7 +1,7 @@
 /**
  * Table row rendering for club and trainer reports.
- * Generates progress bars, rank change indicators,
- * shame change indicators, and stat card fields.
+ * Generates progress bars, shame change indicators,
+ * and stat card fields.
  */
 
 const {
@@ -9,8 +9,7 @@ const {
 } = require('./colors');
 
 /**
- * Render table rows with progress bars, rank changes,
- * and shame changes.
+ * Render table rows with progress bars, shame changes.
  *
  * @param {Array} rows - array of row objects
  * @param {number} goal - target fan count
@@ -42,36 +41,6 @@ function renderRows(rows, goal, currentGoal, showShame) {
         const shameColor = getShameColor(
             row.shame ?? 0
         );
-
-        // =========================
-        // RANK CHANGE
-        // =========================
-
-        const rankChange =
-            Number(row.rankChange);
-
-        let rankChangeHtml = '';
-
-        if (
-            Number.isFinite(rankChange) &&
-            rankChange !== 0
-        ) {
-
-            if (rankChange > 0) {
-                rankChangeHtml =
-                    `<span class="rank-change-up">` +
-                        `<span class="rank-arrow">▲</span>` +
-                        `<span>${rankChange}</span>` +
-                    `</span>`;
-            } else if (rankChange < 0) {
-                rankChangeHtml =
-                    `<span class="rank-change-down">` +
-                        `<span class="rank-arrow">▼</span>` +
-                        `<span>${Math.abs(rankChange)}</span>` +
-                    `</span>`;
-            }
-
-        }
 
         // =========================
         // SHAME CHANGE
@@ -117,7 +86,6 @@ function renderRows(rows, goal, currentGoal, showShame) {
                     <span class="rank-number">
                         #${row.rank}
                     </span>
-                    ${rankChangeHtml}
                 </td>
 
                 <td class="name">

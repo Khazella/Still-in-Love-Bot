@@ -24,9 +24,6 @@ const trainerDb =
 const clubSettingsDb =
     require('../services/database/club-settings');
 
-const memberStateDb =
-    require('../services/database/member-state');
-
 const weeklyFans =
     require('../services/club-report/weekly');
 
@@ -95,31 +92,6 @@ async function handleLocalCommand(
             );
 
         // =========================
-        // MEMBER RANK STATE
-        // =========================
-
-        const circleId =
-            latest.data?.circle?.circle_id ??
-            latest.circle?.circle_id;
-
-        if (!circleId) {
-
-            await interaction.editReply(
-                'Club circle ID not found.'
-            );
-
-            return;
-
-        }
-
-        const memberStates =
-            await memberStateDb.getClubMemberStates(
-                latest.data?.circle?.circle_id ??
-                latest.circle?.circle_id,
-                latest.source
-            );
-
-        // =========================
         // GENERATE REPORT
         // =========================
 
@@ -132,14 +104,12 @@ async function handleLocalCommand(
             period === 'monthly'
                 ? monthlyFans.generateMonthlyReport(
                     latest,
-                    settings,
-                    memberStates
+                    settings
                 )
                 : weeklyFans.generateWeeklyReport(
                     latest,
                     settings,
-                    period,
-                    memberStates
+                    period
                 );
 
         const serviceName =

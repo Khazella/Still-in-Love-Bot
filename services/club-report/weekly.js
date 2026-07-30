@@ -22,8 +22,7 @@ const {
 function generateWeeklyReport(
     row,
     settings,
-    period = 'current',
-    memberStates = []
+    period = 'current'
 ) {
 
     logger.service('club-report.generateWeeklyReport()');
@@ -108,58 +107,6 @@ function generateWeeklyReport(
             currentWeekIndex + 1;
 
         // ===================================================
-        // ACTUAL CURRENT WEEK
-        //
-        // Always calculate this separately using "current".
-        // This lets us know whether a selected Week 1/2/3/4
-        // is actually the live/current week.
-        // ===================================================
-
-        const actualCurrentWeekInfo =
-            getCurrentWeekInfo(
-                filteredMembers[0]?.daily_fans ?? [],
-                'current'
-            );
-
-        const actualCurrentWeek =
-            actualCurrentWeekInfo.currentWeekIndex + 1;
-
-        const showRankChange =
-            selectedWeek === actualCurrentWeek;
-
-        // ===================================================
-        // MEMBER STATE MAP
-        // viewer_id -> DB state
-        // ===================================================
-
-        const memberStateMap =
-            new Map();
-
-        if (
-            Array.isArray(memberStates)
-        ) {
-
-            for (
-                const state
-                of memberStates
-            ) {
-
-                if (
-                    state?.viewer_id == null
-                ) {
-                    continue;
-                }
-
-                memberStateMap.set(
-                    String(state.viewer_id),
-                    state
-                );
-
-            }
-
-        }
-
-        // ===================================================
         // QUOTA
         // ===================================================
 
@@ -193,43 +140,6 @@ function generateWeeklyReport(
                             weekInfo
                         );
 
-                    const state =
-                        memberStateMap.get(
-                            String(
-                                member.viewer_id
-                            )
-                        );
-
-                    // =======================================
-                    // RANK CHANGE
-                    //
-                    // Only use DB movement when:
-                    //
-                    // 1. selected week is current week
-                    // 2. DB state belongs to same week
-                    //
-                    // null means no movement to display.
-                    // =======================================
-
-                    let rankChange =
-                        null;
-
-                    if (
-                        showRankChange &&
-                        state &&
-                        Number(
-                            state.weekly_week
-                        ) === selectedWeek &&
-                        state.weekly_rank_change != null
-                    ) {
-
-                        rankChange =
-                            Number(
-                                state.weekly_rank_change
-                            );
-
-                    }
-
                     // =======================================
                     // SHAME
                     //
@@ -240,25 +150,10 @@ function generateWeeklyReport(
                     let shame =
                         null;
 
-                    let shameChange =
-                        null;
-
                     if (isUmaMoe) {
 
                         shame =
                             member.shame_score ?? 0;
-
-                        if (
-                            state &&
-                            state.shame_change != null
-                        ) {
-
-                            shameChange =
-                                Number(
-                                    state.shame_change
-                                );
-
-                        }
 
                     }
 
@@ -280,11 +175,7 @@ function generateWeeklyReport(
                         daily:
                             stats.dailyAverage,
 
-                        shame,
-
-                        shameChange,
-
-                        rankChange
+                        shame
 
                     };
 
@@ -299,9 +190,6 @@ function generateWeeklyReport(
                         rank:
                             index + 1,
 
-                        rankChange:
-                            r.rankChange,
-
                         name:
                             r.name,
 
@@ -312,10 +200,7 @@ function generateWeeklyReport(
                             r.daily.toLocaleString(),
 
                         shame:
-                            r.shame,
-
-                        shameChange:
-                            r.shameChange
+                            r.shame
 
                     })
                 );

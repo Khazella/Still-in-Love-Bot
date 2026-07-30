@@ -103,40 +103,8 @@ function getCurrentWeeklyGoal(goal) {
     return dailyTarget * dayOfCurrentWeek;
 }
 
-function getRankIconFile(description = '') {
-
-    const match = description.match(
-        /Monthly Rank:\s*(\d+)/i
-    );
-
-    if (!match) {
-        return 'ranks/rank_1000_icon.png';
-    }
-
-    const rank = Number(match[1]);
-
-    if (rank <= 10) {
-        return 'ranks/rank_10_icon.png';
-    }
-
-    if (rank <= 30) {
-        return 'ranks/rank_30_icon.png';
-    }
-
-    if (rank <= 100) {
-        return 'ranks/rank_100_icon.png';
-    }
-
-    if (rank <= 500) {
-        return 'ranks/rank_500_icon.png';
-    }
-
-    return 'ranks/rank_1000_icon.png';
-}
-
 module.exports = {
     extractGoal,
     getCurrentGoal,
-    getCurrentWeeklyGoal,
-    getRankIconFile
+    getCurrentWeeklyGoal
 };

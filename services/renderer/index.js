@@ -106,6 +106,13 @@ async function renderTemplate(
         rowsHtml
     );
 
+    html = html.replace(
+        '{{SHAME_HEADER}}',
+        data.showShame
+            ? '<th class="col-shame">Shame</th>'
+            : ''
+    );
+
     const fieldsHtml = renderFields(
         data
     );

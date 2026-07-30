@@ -20,8 +20,7 @@ const {
 
 function generateMonthlyReport(
     row,
-    settings,
-    memberStates = []
+    settings
 ) {
 
     logger.service('club-report.generateMonthlyReport()');
@@ -99,38 +98,6 @@ function generateMonthlyReport(
         }
 
         // ================================
-        // MEMBER STATE MAP
-        // viewer_id -> DB state
-        // ================================
-
-        const memberStateMap =
-            new Map();
-
-        if (
-            Array.isArray(memberStates)
-        ) {
-
-            for (
-                const state
-                of memberStates
-            ) {
-
-                if (
-                    state?.viewer_id == null
-                ) {
-                    continue;
-                }
-
-                memberStateMap.set(
-                    String(state.viewer_id),
-                    state
-                );
-
-            }
-
-        }
-
-        // ================================
         // AGGREGATION
         // ================================
 
@@ -165,32 +132,6 @@ function generateMonthlyReport(
 
             }
 
-            const state =
-                memberStateMap.get(
-                    String(
-                        member.viewer_id
-                    )
-                );
-
-            // ================================
-            // MONTHLY RANK CHANGE
-            // ================================
-
-            let rankChange =
-                null;
-
-            if (
-                state &&
-                state.monthly_rank_change != null
-            ) {
-
-                rankChange =
-                    Number(
-                        state.monthly_rank_change
-                    );
-
-            }
-
             // ================================
             // SHAME
             //
@@ -201,25 +142,10 @@ function generateMonthlyReport(
             let shame =
                 null;
 
-            let shameChange =
-                null;
-
             if (isUmaMoe) {
 
                 shame =
                     member.shame_score ?? 0;
-
-                if (
-                    state &&
-                    state.shame_change != null
-                ) {
-
-                    shameChange =
-                        Number(
-                            state.shame_change
-                        );
-
-                }
 
             }
 
@@ -242,12 +168,7 @@ function generateMonthlyReport(
                     stats.activeDays,
 
                 shame_score:
-                    shame,
-
-                shame_change:
-                    shameChange,
-
-                rankChange
+                    shame
 
             });
 
@@ -295,9 +216,6 @@ function generateMonthlyReport(
                         rank:
                             index + 1,
 
-                        rankChange:
-                            r.rankChange,
-
                         name:
                             r.memberName,
 
@@ -308,10 +226,7 @@ function generateMonthlyReport(
                             dailyAvg.toLocaleString(),
 
                         shame:
-                            r.shame_score,
-
-                        shameChange:
-                            r.shame_change
+                            r.shame_score
 
                     };
 

@@ -10,6 +10,38 @@ const {
 } = require('../asset-loader');
 
 /**
+ * Rank icon filename lookup based on numeric rank.
+ *
+ * @param {number|null} rank - club's monthly rank
+ * @returns {string|null} asset filename, or null if no icon should be shown
+ */
+function resolveRankIcon(rank) {
+
+    if (rank == null || rank > 1000) {
+        return null;
+    }
+
+    if (rank <= 10) {
+        return 'ranks/rank_10_icon.png';
+    }
+
+    if (rank <= 30) {
+        return 'ranks/rank_30_icon.png';
+    }
+
+    if (rank <= 100) {
+        return 'ranks/rank_100_icon.png';
+    }
+
+    if (rank <= 500) {
+        return 'ranks/rank_500_icon.png';
+    }
+
+    return 'ranks/rank_1000_icon.png';
+
+}
+
+/**
  * Read an HTML template file from the templates directory.
  *
  * @param {string} templateName - name of the template (without .html)
@@ -33,11 +65,11 @@ function loadTemplateHtml(templateName) {
 }
 
 /**
- * Load character icon and background image as
+ * Load character icon, background image, and rank badge as
  * base64 data URIs based on the report data.
  *
  * @param {object} data - report data
- * @returns {{ airGrooveIcon: string, backgroundImage: string }}
+ * @returns {{ airGrooveIcon: string, backgroundImage: string, rankIcon: string }}
  */
 function resolveTemplateAssets(data) {
 
@@ -54,19 +86,29 @@ function resolveTemplateAssets(data) {
             : 'backgrounds/Still_in_Love_aahn.jpg'
     );
 
+    const rankFileName =
+        resolveRankIcon(data.monthlyRank);
+
+    let rankIcon = '';
+
+    if (rankFileName) {
+        rankIcon = `<img class="rank-icon" src="${loadAsset(rankFileName)}" alt="Rank ${data.monthlyRank}">`;
+    }
+
     return {
         airGrooveIcon,
-        backgroundImage
+        backgroundImage,
+        rankIcon
     };
 
 }
 
 /**
- * Replace asset placeholders (CHARACTER_ICON, BACKGROUND_IMAGE)
+ * Replace asset placeholders (CHARACTER_ICON, BACKGROUND_IMAGE, RANK_ICON)
  * with the corresponding base64 data URIs.
  *
  * @param {string} html - template HTML
- * @param {{ airGrooveIcon: string, backgroundImage: string }} assets
+ * @param {{ airGrooveIcon: string, backgroundImage: string, rankIcon: string }} assets
  * @returns {string} HTML with placeholders replaced
  */
 function replaceAssetPlaceholders(html, assets) {
@@ -79,6 +121,11 @@ function replaceAssetPlaceholders(html, assets) {
     html = html.replace(
         '{{BACKGROUND_IMAGE}}',
         assets.backgroundImage
+    );
+
+    html = html.replace(
+        '{{RANK_ICON}}',
+        assets.rankIcon
     );
 
     return html;

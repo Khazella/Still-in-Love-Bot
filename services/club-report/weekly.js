@@ -241,6 +241,11 @@ function generateWeeklyReport(
                 `Last Month Rank: ${circle.last_month_rank ?? '-'}\n` +
                 `Members: ${filteredMembers.length}/30`,
 
+            monthlyRank:
+                circle.monthly_rank != null
+                    ? Number(circle.monthly_rank)
+                    : null,
+
             color:
                 0xff3b3b,
 

@@ -23,8 +23,6 @@ function generateMonthlyReport(
     settings
 ) {
 
-    logger.service('club-report.generateMonthlyReport()');
-
     try {
 
         const quotaInfo =

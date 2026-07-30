@@ -17,8 +17,6 @@ function generateMonthlyReport(
     settings
 ) {
 
-    logger.service('trainer.generateMonthlyReport()');
-
     try {
 
         const member =

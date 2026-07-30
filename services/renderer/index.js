@@ -4,8 +4,6 @@
  * Entry point: exports renderTemplate() for use by handlers.
  */
 
-const logger = require('../logger');
-
 const {
     screenshot
 } = require('./puppeteer');
@@ -51,8 +49,6 @@ async function renderTemplate(
     templateName,
     data
 ) {
-
-    logger.render(`renderTemplate("${templateName}")`);
 
     let html = loadTemplateHtml(
         templateName

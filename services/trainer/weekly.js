@@ -18,8 +18,6 @@ function generateWeeklyReport(
     period = 'current'
 ) {
 
-    logger.service('trainer.generateWeeklyReport()');
-
     try {
 
         const member =

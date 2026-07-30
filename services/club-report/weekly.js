@@ -25,8 +25,6 @@ function generateWeeklyReport(
     period = 'current'
 ) {
 
-    logger.service('club-report.generateWeeklyReport()');
-
     try {
 
         const members =
@@ -128,11 +126,11 @@ function generateWeeklyReport(
         // ROWS
         // ===================================================
 
+        const calcStart = Date.now();
+
         const rows =
             filteredMembers
                 .map(member => {
-
-                    logger.calc('calculateWeeklyStats()');
 
                     const stats =
                         calculateWeeklyStats(
@@ -204,6 +202,8 @@ function generateWeeklyReport(
 
                     })
                 );
+
+        logger.calc(`Weekly statistics completed (${filteredMembers.length} members, ${Date.now() - calcStart}ms)`);
 
         // ===================================================
         // OUTPUT

@@ -1,3 +1,5 @@
+const logger = require('../logger');
+
 const {
     getQuotaInfo
 } = require('../calculations/quota');
@@ -18,8 +20,11 @@ const {
 
 function generateMonthlyReport(
     row,
-    settings
+    settings,
+    memberStates = []
 ) {
+
+    logger.service('club-report.generateMonthlyReport()');
 
     try {
 
@@ -61,6 +66,9 @@ function generateMonthlyReport(
             row.data?.source ||
             'uma.moe';
 
+        const isUmaMoe =
+            dataSource === 'uma.moe';
+
         // ================================
         // KEEP ACTIVE MEMBERS ONLY
         // ================================
@@ -88,6 +96,38 @@ function generateMonthlyReport(
             throw new Error(
                 'No active members found'
             );
+        }
+
+        // ================================
+        // MEMBER STATE MAP
+        // viewer_id -> DB state
+        // ================================
+
+        const memberStateMap =
+            new Map();
+
+        if (
+            Array.isArray(memberStates)
+        ) {
+
+            for (
+                const state
+                of memberStates
+            ) {
+
+                if (
+                    state?.viewer_id == null
+                ) {
+                    continue;
+                }
+
+                memberStateMap.set(
+                    String(state.viewer_id),
+                    state
+                );
+
+            }
+
         }
 
         // ================================
@@ -125,7 +165,68 @@ function generateMonthlyReport(
 
             }
 
+            const state =
+                memberStateMap.get(
+                    String(
+                        member.viewer_id
+                    )
+                );
+
+            // ================================
+            // MONTHLY RANK CHANGE
+            // ================================
+
+            let rankChange =
+                null;
+
+            if (
+                state &&
+                state.monthly_rank_change != null
+            ) {
+
+                rankChange =
+                    Number(
+                        state.monthly_rank_change
+                    );
+
+            }
+
+            // ================================
+            // SHAME
+            //
+            // Uma.moe has shame data.
+            // Chronogenesis does not.
+            // ================================
+
+            let shame =
+                null;
+
+            let shameChange =
+                null;
+
+            if (isUmaMoe) {
+
+                shame =
+                    member.shame_score ?? 0;
+
+                if (
+                    state &&
+                    state.shame_change != null
+                ) {
+
+                    shameChange =
+                        Number(
+                            state.shame_change
+                        );
+
+                }
+
+            }
+
             monthlyResults.push({
+
+                viewerId:
+                    member.viewer_id,
 
                 memberName:
                     normalizeName(
@@ -141,7 +242,12 @@ function generateMonthlyReport(
                     stats.activeDays,
 
                 shame_score:
-                    member.shame_score ?? 0
+                    shame,
+
+                shame_change:
+                    shameChange,
+
+                rankChange
 
             });
 
@@ -189,6 +295,9 @@ function generateMonthlyReport(
                         rank:
                             index + 1,
 
+                        rankChange:
+                            r.rankChange,
+
                         name:
                             r.memberName,
 
@@ -199,7 +308,10 @@ function generateMonthlyReport(
                             dailyAvg.toLocaleString(),
 
                         shame:
-                            r.shame_score
+                            r.shame_score,
+
+                        shameChange:
+                            r.shame_change
 
                     };
 
@@ -221,13 +333,19 @@ function generateMonthlyReport(
                 `Last Month Rank: ${circle.last_month_rank ?? '-'}\n` +
                 `Members: ${filteredMembers.length}/30`,
 
-            color: 0xff3b3b,
+            color:
+                0xff3b3b,
 
             reportType:
                 'monthly',
 
             source:
                 dataSource,
+
+            // Uma.moe = show Shame column.
+            // Chronogenesis = remove Shame column.
+            showShame:
+                isUmaMoe,
 
             footer:
                 scrapedAtUtc
@@ -240,17 +358,27 @@ function generateMonthlyReport(
 
     } catch (error) {
 
+        logger.error(
+            'club-report.generateMonthlyReport()',
+            error
+        );
+
         return {
 
-            title: 'Error',
+            title:
+                'Error',
 
             description:
                 error.message,
 
-            color: 0xff0000,
+            color:
+                0xff0000,
 
             reportType:
                 'monthly',
+
+            showShame:
+                false,
 
             rows: []
 

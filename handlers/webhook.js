@@ -1,3 +1,5 @@
+const logger = require('../services/logger');
+
 const axios = require('axios');
 
 const {
@@ -52,6 +54,14 @@ function isRenderable(data) {
     if (
         data?.trainer_name &&
         Array.isArray(data?.fan_history)
+    ) {
+        return true;
+    }
+
+    // NEW benchmark format
+    if (
+        data?.current &&
+        Array.isArray(data?.chart)
     ) {
         return true;
     }
@@ -188,6 +198,13 @@ async function handleWebhookCommand(
     interaction
 ) {
 
+    const commandName = interaction.commandName;
+
+    logger.command(`/${commandName}`);
+    logger.handler('handleWebhookCommand');
+
+    const startTime = Date.now();
+
     await interaction.deferReply();
 
     try {
@@ -238,11 +255,15 @@ async function handleWebhookCommand(
                     options
                 );
 
+            const t1 = Date.now();
+
             const imageBuffer =
                 await renderTemplate(
                     templateName,
                     data
                 );
+
+            logger.render(`renderTemplate("${templateName}")`, Date.now() - t1);
 
             const attachment =
                 new AttachmentBuilder(
@@ -292,6 +313,8 @@ async function handleWebhookCommand(
 
             });
 
+            logger.done(`/${commandName}`, Date.now() - startTime);
+
             return;
 
         }
@@ -311,9 +334,12 @@ async function handleWebhookCommand(
 
         });
 
+        logger.done(`/${commandName}`, Date.now() - startTime);
+
     } catch (error) {
 
-        console.error(
+        logger.error(
+            `/${commandName}`,
             error
         );
 

@@ -141,10 +141,51 @@ tbody tr:hover {
 ========================= */
 
 .rank {
-    width: 70px;
+    width: 105px;
     font-weight: 800;
     font-size: 24px;
-    text-align: center;
+    white-space: nowrap;
+}
+
+.rank-inner {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.rank-number {
+    display: inline-block;
+    width: 48px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.rank-change-up,
+.rank-change-down {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-left: 6px;
+
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.rank-change-up {
+    color: #57f287;
+}
+
+.rank-change-down {
+    color: #ed4245;
+}
+
+.rank-arrow {
+    display: inline-block;
+    font-size: 13px;
+    line-height: 1;
+    margin-right: 2px;
 }
 
 .name {
@@ -180,6 +221,48 @@ tbody tr:hover {
     text-align: center;
     font-weight: 800;
     font-size: 22px;
+
+    position: relative;
+}
+
+.shame-number {
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+.shame-change-up,
+.shame-change-down {
+    position: absolute;
+
+    left: calc(50% + 18px);
+    top: 50%;
+    transform: translateY(-50%);
+
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1;
+
+    white-space: nowrap;
+}
+
+/* Shame increased = bad */
+.shame-change-up {
+    color: #ff5d5d;
+}
+
+/* Shame decreased = good */
+.shame-change-down {
+    color: #7ee787;
+}
+
+.shame-arrow {
+    font-size: 14px;
+    line-height: 1;
 }
 
 /* =========================
@@ -215,7 +298,7 @@ tbody tr:hover {
 ========================= */
 
 .col-rank {
-    width: 70px;
+    width: 110px;
 }
 
 .col-name {

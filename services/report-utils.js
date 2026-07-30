@@ -48,6 +48,7 @@ function getCurrentGoal(goal) {
 function getCurrentWeeklyGoal(goal) {
 
     const DAYS_PER_WEEK = 7;
+    const MAX_WEEK_INDEX = 3;
 
     const jakartaNow = new Date(
         new Date().toLocaleString('en-US', {
@@ -61,11 +62,43 @@ function getCurrentWeeklyGoal(goal) {
             jakartaNow.getDate() - 1
         );
 
+    // Use the same capped week-index calculation as
+    // getCurrentWeekInfo() so days 29-31 stay in Week 4.
+    const currentWeekIndex =
+        Math.min(
+            Math.floor(
+                (effectiveDay - 1) /
+                DAYS_PER_WEEK
+            ),
+            MAX_WEEK_INDEX
+        );
+
+    // Recalculate dayOfCurrentWeek based on the capped
+    // week start day (e.g. day 30 → day 9 of Week 4).
+    const weekStartDay =
+        currentWeekIndex *
+        DAYS_PER_WEEK;
+
     const dayOfCurrentWeek =
-        ((effectiveDay - 1) % DAYS_PER_WEEK) + 1;
+        effectiveDay - weekStartDay;
+
+    // Determine how many days are in the current week
+    // so we can derive the correct daily target from
+    // the weekly goal. Weeks 1-3 always have 7 days.
+    // Week 4 has (daysInMonth - 21) days.
+    const daysInMonth = new Date(
+        jakartaNow.getFullYear(),
+        jakartaNow.getMonth() + 1,
+        0
+    ).getDate();
+
+    const weekDaysCount =
+        currentWeekIndex < MAX_WEEK_INDEX
+            ? DAYS_PER_WEEK
+            : daysInMonth - 21;
 
     const dailyTarget =
-        goal / DAYS_PER_WEEK;
+        goal / weekDaysCount;
 
     return dailyTarget * dayOfCurrentWeek;
 }

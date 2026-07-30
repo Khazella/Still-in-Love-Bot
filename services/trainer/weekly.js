@@ -1,3 +1,5 @@
+const logger = require('../logger');
+
 const {
     getQuotaInfo
 } = require('../calculations/quota');
@@ -12,8 +14,11 @@ const {
 
 function generateWeeklyReport(
     row,
-    settings
+    settings,
+    period = 'current'
 ) {
+
+    logger.service('trainer.generateWeeklyReport()');
 
     try {
 
@@ -37,8 +42,13 @@ function generateWeeklyReport(
         const isChrono =
             dataSource === 'chronogenesis.net';
 
+        logger.calc('getCurrentWeekInfo()');
+
         const weekInfo =
-            getCurrentWeekInfo();
+            getCurrentWeekInfo(
+                member.daily_fans ?? [],
+                period
+            );
 
         const {
             currentWeekIndex
@@ -57,6 +67,8 @@ function generateWeeklyReport(
                 weeklyGoal /
                 1_000_000
             ).toFixed(1)}M`;
+
+        logger.calc('calculateWeeklyStats()');
 
         const stats =
             calculateWeeklyStats(
@@ -95,6 +107,19 @@ function generateWeeklyReport(
             });
         }
 
+        // ===================================================
+        // CURRENT GOAL (for progress bar color)
+        //
+        // The expected fan gain for the current point in the
+        // current week. Used by the renderer to determine
+        // whether the trainer is ahead/behind quota.
+        // ===================================================
+
+        const currentGoal =
+            quotaInfo.dailyGoals[
+                currentWeekIndex + 1
+            ] * weekInfo.dayOfCurrentWeek;
+
         return {
 
             title:
@@ -109,6 +134,9 @@ function generateWeeklyReport(
             reportType:
                 'weekly',
 
+            source:
+                dataSource,
+
             footer:
                 scrapedAtUtc
                     ? `Data source: ${dataSource} | Last data updated: ${scrapedAtUtc}`
@@ -117,11 +145,18 @@ function generateWeeklyReport(
             fields,
 
             chart:
-                stats.chart
+                stats.chart,
+
+            currentGoal
 
         };
 
     } catch (error) {
+
+        logger.error(
+            'trainer.generateWeeklyReport()',
+            error
+        );
 
         return {
 
@@ -134,6 +169,9 @@ function generateWeeklyReport(
 
             reportType:
                 'weekly',
+
+            source:
+                row?.source ?? 'uma.moe',
 
             fields: [],
 

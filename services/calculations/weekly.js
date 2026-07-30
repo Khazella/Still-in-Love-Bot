@@ -1,4 +1,5 @@
 const DAYS_PER_WEEK = 7;
+const MAX_WEEK_INDEX = 3;
 
 function calculateWeeklyStats(
     dailyFans,
@@ -71,9 +72,12 @@ function calculateWeeklyStats(
         }
 
         const weekIndex =
-            Math.floor(
-                (i - 1) /
-                DAYS_PER_WEEK
+            Math.min(
+                Math.floor(
+                    (i - 1) /
+                    DAYS_PER_WEEK
+                ),
+                MAX_WEEK_INDEX
             );
 
         weeklyTotals[
@@ -103,8 +107,17 @@ function calculateWeeklyStats(
             )
             : 0;
 
+    // Cap weekStartDay so that for week index 3
+    // (Week 4), it starts at day 22 (index 21)
+    // regardless of effectiveDay being 29-31.
+    const cappedWeekIndex =
+        Math.min(
+            currentWeekIndex,
+            MAX_WEEK_INDEX
+        );
+
     const weekStartDay =
-        currentWeekIndex *
+        cappedWeekIndex *
         DAYS_PER_WEEK;
 
     const chartSource =

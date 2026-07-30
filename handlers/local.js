@@ -1,3 +1,5 @@
+const logger = require('../services/logger');
+
 const LOCAL_COMMANDS = new Set([
     'club-report',
     'trainer',
@@ -22,6 +24,9 @@ const trainerDb =
 const clubSettingsDb =
     require('../services/database/club-settings');
 
+const memberStateDb =
+    require('../services/database/member-state');
+
 const weeklyFans =
     require('../services/club-report/weekly');
 
@@ -43,7 +48,15 @@ async function handleLocalCommand(
     client
 ) {
 
+    const commandName = interaction.commandName;
+
+    logger.command(`/${commandName}`);
+    logger.handler('handleLocalCommand');
+
+    const startTime = Date.now();
+
     await interaction.deferReply();
+
     const options = {};
 
     for (
@@ -58,12 +71,18 @@ async function handleLocalCommand(
     // LOCAL CLUB COMMAND
     // =========================
 
-    if (interaction.commandName === 'club-report') {
+    if (
+        interaction.commandName ===
+        'club-report'
+    ) {
 
-        const source = options.source || 'uma';
+        const source =
+            options.source || 'uma';
 
         const latest =
-            await clubDb.getLatestClubData(source);
+            await clubDb.getLatestClubData(
+                source
+            );
 
         latest.source =
             source === 'chrono'
@@ -75,22 +94,70 @@ async function handleLocalCommand(
                 options.club
             );
 
+        // =========================
+        // MEMBER RANK STATE
+        // =========================
+
+        const circleId =
+            latest.data?.circle?.circle_id ??
+            latest.circle?.circle_id;
+
+        if (!circleId) {
+
+            await interaction.editReply(
+                'Club circle ID not found.'
+            );
+
+            return;
+
+        }
+
+        const memberStates =
+            await memberStateDb.getClubMemberStates(
+                latest.data?.circle?.circle_id ??
+                latest.circle?.circle_id,
+                latest.source
+            );
+
+        // =========================
+        // GENERATE REPORT
+        // =========================
+
+        const period =
+            options.period;
+
+        const t1 = Date.now();
+
         const report =
-            options.period === 'weekly'
-                ? weeklyFans.generateWeeklyReport(
+            period === 'monthly'
+                ? monthlyFans.generateMonthlyReport(
                     latest,
-                    settings
+                    settings,
+                    memberStates
                 )
-                : monthlyFans.generateMonthlyReport(
+                : weeklyFans.generateWeeklyReport(
                     latest,
-                    settings
+                    settings,
+                    period,
+                    memberStates
                 );
+
+        const serviceName =
+            period === 'monthly'
+                ? 'club-report.generateMonthlyReport()'
+                : 'club-report.generateWeeklyReport()';
+
+        logger.service(serviceName, Date.now() - t1);
+
+        const t2 = Date.now();
 
         const imageBuffer =
             await renderTemplate(
                 'club',
                 report
             );
+
+        logger.render('renderTemplate("club")', Date.now() - t2);
 
         const attachment =
             new AttachmentBuilder(
@@ -103,6 +170,8 @@ async function handleLocalCommand(
         await interaction.editReply({
             files: [attachment]
         });
+
+        logger.done(`/${commandName}`, Date.now() - startTime);
 
         return;
 
@@ -146,22 +215,39 @@ async function handleLocalCommand(
                 'First'
             );
 
+        const period =
+            options.period;
+
+        const t1 = Date.now();
+
         const report =
-            options.period === 'weekly'
-                ? weeklyTrainer.generateWeeklyReport(
+            period === 'monthly'
+                ? monthlyTrainer.generateMonthlyReport(
                     trainer,
                     settings
                 )
-                : monthlyTrainer.generateMonthlyReport(
+                : weeklyTrainer.generateWeeklyReport(
                     trainer,
-                    settings
+                    settings,
+                    period
                 );
+
+        const serviceName =
+            period === 'monthly'
+                ? 'trainer.generateMonthlyReport()'
+                : 'trainer.generateWeeklyReport()';
+
+        logger.service(serviceName, Date.now() - t1);
+
+        const t2 = Date.now();
 
         const imageBuffer =
             await renderTemplate(
                 'trainer',
                 report
             );
+
+        logger.render('renderTemplate("trainer")', Date.now() - t2);
 
         const attachment =
             new AttachmentBuilder(
@@ -174,6 +260,8 @@ async function handleLocalCommand(
         await interaction.editReply({
             files: [attachment]
         });
+
+        logger.done(`/${commandName}`, Date.now() - startTime);
 
         return;
 
@@ -239,6 +327,8 @@ async function handleLocalCommand(
         await interaction.editReply({
             embeds: [embed]
         });
+
+        logger.done(`/${commandName}`, Date.now() - startTime);
 
         return;
 
@@ -327,6 +417,8 @@ async function handleLocalCommand(
         await interaction.editReply({
             embeds: [embed]
         });
+
+        logger.done(`/${commandName}`, Date.now() - startTime);
 
         return;
 

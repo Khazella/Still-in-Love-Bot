@@ -1,3 +1,5 @@
+const logger = require('../logger');
+
 const {
     getQuotaInfo
 } = require('../calculations/quota');
@@ -19,31 +21,14 @@ const {
 
 function generateWeeklyReport(
     row,
-    settings
+    settings,
+    period = 'current',
+    memberStates = []
 ) {
 
+    logger.service('club-report.generateWeeklyReport()');
+
     try {
-
-        const weekInfo =
-            getCurrentWeekInfo();
-
-        const {
-            currentWeekIndex
-        } = weekInfo;
-
-        const quotaInfo =
-            getQuotaInfo(settings);
-
-        const weeklyGoal =
-            quotaInfo.weeklyGoals[
-                currentWeekIndex + 1
-            ];
-
-        const thresholdText =
-            `${(
-                weeklyGoal /
-                1_000_000
-            ).toFixed(1)}M`;
 
         const members =
             row.members ||
@@ -74,6 +59,13 @@ function generateWeeklyReport(
             row.data?.source ||
             'uma.moe';
 
+        const isUmaMoe =
+            dataSource === 'uma.moe';
+
+        // ===================================================
+        // ACTIVE MEMBERS
+        // ===================================================
+
         const latestUpdate =
             getLatestUpdate(
                 members
@@ -88,9 +80,112 @@ function generateWeeklyReport(
                     )
             );
 
+        if (
+            filteredMembers.length === 0
+        ) {
+            throw new Error(
+                'No active members found'
+            );
+        }
+
+        // ===================================================
+        // SELECTED WEEK
+        // ===================================================
+
+        logger.calc('getCurrentWeekInfo()');
+
+        const weekInfo =
+            getCurrentWeekInfo(
+                filteredMembers[0]?.daily_fans ?? [],
+                period
+            );
+
+        const {
+            currentWeekIndex
+        } = weekInfo;
+
+        const selectedWeek =
+            currentWeekIndex + 1;
+
+        // ===================================================
+        // ACTUAL CURRENT WEEK
+        //
+        // Always calculate this separately using "current".
+        // This lets us know whether a selected Week 1/2/3/4
+        // is actually the live/current week.
+        // ===================================================
+
+        const actualCurrentWeekInfo =
+            getCurrentWeekInfo(
+                filteredMembers[0]?.daily_fans ?? [],
+                'current'
+            );
+
+        const actualCurrentWeek =
+            actualCurrentWeekInfo.currentWeekIndex + 1;
+
+        const showRankChange =
+            selectedWeek === actualCurrentWeek;
+
+        // ===================================================
+        // MEMBER STATE MAP
+        // viewer_id -> DB state
+        // ===================================================
+
+        const memberStateMap =
+            new Map();
+
+        if (
+            Array.isArray(memberStates)
+        ) {
+
+            for (
+                const state
+                of memberStates
+            ) {
+
+                if (
+                    state?.viewer_id == null
+                ) {
+                    continue;
+                }
+
+                memberStateMap.set(
+                    String(state.viewer_id),
+                    state
+                );
+
+            }
+
+        }
+
+        // ===================================================
+        // QUOTA
+        // ===================================================
+
+        const quotaInfo =
+            getQuotaInfo(settings);
+
+        const weeklyGoal =
+            quotaInfo.weeklyGoals[
+                selectedWeek
+            ] || 0;
+
+        const thresholdText =
+            `${(
+                weeklyGoal /
+                1_000_000
+            ).toFixed(1)}M`;
+
+        // ===================================================
+        // ROWS
+        // ===================================================
+
         const rows =
             filteredMembers
                 .map(member => {
+
+                    logger.calc('calculateWeeklyStats()');
 
                     const stats =
                         calculateWeeklyStats(
@@ -98,7 +193,79 @@ function generateWeeklyReport(
                             weekInfo
                         );
 
+                    const state =
+                        memberStateMap.get(
+                            String(
+                                member.viewer_id
+                            )
+                        );
+
+                    // =======================================
+                    // RANK CHANGE
+                    //
+                    // Only use DB movement when:
+                    //
+                    // 1. selected week is current week
+                    // 2. DB state belongs to same week
+                    //
+                    // null means no movement to display.
+                    // =======================================
+
+                    let rankChange =
+                        null;
+
+                    if (
+                        showRankChange &&
+                        state &&
+                        Number(
+                            state.weekly_week
+                        ) === selectedWeek &&
+                        state.weekly_rank_change != null
+                    ) {
+
+                        rankChange =
+                            Number(
+                                state.weekly_rank_change
+                            );
+
+                    }
+
+                    // =======================================
+                    // SHAME
+                    //
+                    // Uma.moe has shame data.
+                    // Chronogenesis does not.
+                    // =======================================
+
+                    let shame =
+                        null;
+
+                    let shameChange =
+                        null;
+
+                    if (isUmaMoe) {
+
+                        shame =
+                            member.shame_score ?? 0;
+
+                        if (
+                            state &&
+                            state.shame_change != null
+                        ) {
+
+                            shameChange =
+                                Number(
+                                    state.shame_change
+                                );
+
+                        }
+
+                    }
+
                     return {
+
+                        viewerId:
+                            member.viewer_id,
 
                         name:
                             normalizeName(
@@ -113,8 +280,11 @@ function generateWeeklyReport(
                         daily:
                             stats.dailyAverage,
 
-                        shame:
-                            member.shame_score ?? 0
+                        shame,
+
+                        shameChange,
+
+                        rankChange
 
                     };
 
@@ -129,6 +299,9 @@ function generateWeeklyReport(
                         rank:
                             index + 1,
 
+                        rankChange:
+                            r.rankChange,
+
                         name:
                             r.name,
 
@@ -139,15 +312,43 @@ function generateWeeklyReport(
                             r.daily.toLocaleString(),
 
                         shame:
-                            r.shame
+                            r.shame,
+
+                        shameChange:
+                            r.shameChange
 
                     })
                 );
 
+        // ===================================================
+        // OUTPUT
+        // ===================================================
+
+        // ===================================================
+        // CURRENT GOAL (for progress bar color)
+        //
+        // The expected fan gain for the current point in the
+        // selected week. This is used by the renderer to
+        // determine whether a member is ahead/behind quota.
+        //
+        //   currentGoal = dailyQuota × dayOfCurrentWeek
+        //
+        // For Weeks 1-3, dayOfCurrentWeek is always 7 (end of
+        // completed week), so currentGoal equals the weekly goal.
+        // For Week 4 (current), dayOfCurrentWeek varies based on
+        // how far into the week we are (e.g. day 30 of month
+        // is day 9 of Week 4, so currentGoal = dailyQuota × 9).
+        // ===================================================
+
+        const currentGoal =
+            quotaInfo.dailyGoals[
+                selectedWeek
+            ] * weekInfo.dayOfCurrentWeek;
+
         return {
 
             title:
-                `${settings.display_name} : Weekly Fan Report — Week ${currentWeekIndex + 1}`,
+                `${settings.display_name} : Weekly Fan Report — Week ${selectedWeek}`,
 
             description:
                 `Goal: ${thresholdText}\n` +
@@ -155,7 +356,8 @@ function generateWeeklyReport(
                 `Last Month Rank: ${circle.last_month_rank ?? '-'}\n` +
                 `Members: ${filteredMembers.length}/30`,
 
-            color: 0xff3b3b,
+            color:
+                0xff3b3b,
 
             reportType:
                 'weekly',
@@ -163,16 +365,29 @@ function generateWeeklyReport(
             source:
                 dataSource,
 
+            // Renderer can use this directly.
+            // true  = show Shame column
+            // false = remove Shame column
+            showShame:
+                isUmaMoe,
+
             footer:
                 scrapedAtUtc
                     ? `Data source: ${dataSource} | Last data updated: ${scrapedAtUtc}`
                     : `Data source: ${dataSource}`,
 
-            rows
+            rows,
+
+            currentGoal
 
         };
 
     } catch (error) {
+
+        logger.error(
+            'club-report.generateWeeklyReport()',
+            error
+        );
 
         return {
 
@@ -187,6 +402,9 @@ function generateWeeklyReport(
 
             reportType:
                 'weekly',
+
+            showShame:
+                false,
 
             rows: []
 

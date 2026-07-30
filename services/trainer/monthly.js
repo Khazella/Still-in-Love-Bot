@@ -1,3 +1,5 @@
+const logger = require('../logger');
+
 const {
     getQuotaInfo
 } = require('../calculations/quota');
@@ -14,6 +16,8 @@ function generateMonthlyReport(
     row,
     settings
 ) {
+
+    logger.service('trainer.generateMonthlyReport()');
 
     try {
 
@@ -48,6 +52,8 @@ function generateMonthlyReport(
                 monthlyGoal /
                 1_000_000
             ).toFixed(1)}M`;
+
+        logger.calc('calculateMonthlyStats()');
 
         const stats =
             calculateMonthlyStats(
@@ -117,6 +123,9 @@ function generateMonthlyReport(
             reportType:
                 'monthly',
 
+            source:
+                dataSource,
+
             footer:
                 scrapedAtUtc
                     ? `Data source: ${dataSource} | Last data updated: ${scrapedAtUtc}`
@@ -131,6 +140,11 @@ function generateMonthlyReport(
 
     } catch (error) {
 
+        logger.error(
+            'trainer.generateMonthlyReport()',
+            error
+        );
+
         return {
 
             title: 'Error',
@@ -142,6 +156,9 @@ function generateMonthlyReport(
 
             reportType:
                 'monthly',
+
+            source:
+                row?.source ?? 'uma.moe',
 
             fields: [],
 

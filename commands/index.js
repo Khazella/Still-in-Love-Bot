@@ -21,14 +21,12 @@ module.exports = [
                 type: 3, // STRING
                 required: true,
                 choices: [
-                    {
-                        name: 'Weekly',
-                        value: 'weekly'
-                    },
-                    {
-                        name: 'Monthly',
-                        value: 'monthly'
-                    }
+                    { name: 'Current Week', value: 'current' },
+                    { name: 'Week 1', value: 'week1' },
+                    { name: 'Week 2', value: 'week2' },
+                    { name: 'Week 3', value: 'week3' },
+                    { name: 'Week 4', value: 'week4' },
+                    { name: 'Monthly', value: 'monthly' },
                 ]
             },
             {
@@ -83,8 +81,12 @@ module.exports = [
                 description: 'Report period',
                 required: true,
                 choices: [
-                    { name: 'weekly', value: 'weekly' },
-                    { name: 'monthly', value: 'monthly' }
+                    { name: 'Current Week', value: 'current' },
+                    { name: 'Week 1', value: 'week1' },
+                    { name: 'Week 2', value: 'week2' },
+                    { name: 'Week 3', value: 'week3' },
+                    { name: 'Week 4', value: 'week4' },
+                    { name: 'Monthly', value: 'monthly' },
                 ]
             },
             {

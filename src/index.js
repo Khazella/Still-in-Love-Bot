@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const logger = require('../services/logger');
+
 const {
     LOCAL_COMMANDS,
     handleLocalCommand
@@ -24,18 +26,13 @@ const {
 const greetingConfigs =
     require('./config/greetings');
 
-skillsDb.testConnection()
-    .then(count => {
-        console.log(
-            `Postgres OK: ${count} skills`
-        );
-    })
-    .catch(error => {
-        console.error(
-            'Postgres ERROR:',
-            error.message
-        );
-    });
+// ---- Startup timing ----
+const BOT_START_TIME = Date.now();
+
+// Run DB connection test early and hold the promise for the banner.
+const dbPromise = skillsDb.testConnection()
+    .then(count => ({ connected: true, count }))
+    .catch(error => ({ connected: false, error: error.message }));
 
 const client = new Client({
     intents: [
@@ -48,8 +45,10 @@ const client = new Client({
 
 registerMentionHandler(client);
 
-client.once('ready', () => {
-    console.log(`Logged in as ${client.user.tag}`);
+client.once('clientReady', async () => {
+    const dbStatus = await dbPromise;
+    const { printStartupBanner } = require('../services/startup-banner');
+    printStartupBanner(client, BOT_START_TIME, dbStatus);
 });
 
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
@@ -109,52 +108,42 @@ client.on(
         // =========================
         if (interaction.isAutocomplete()) {
 
-            console.log(
-                'AUTOCOMPLETE:',
-                interaction.commandName,
-                interaction.options.getFocused()
-            );
+            return logger.createContext(async () => {
 
-            try {
+                try {
 
-                if (
-                    interaction.commandName !== 'skill'
-                ) {
-                    return;
-                }
+                    if (
+                        interaction.commandName !== 'skill'
+                    ) {
+                        return;
+                    }
 
-                const focused =
-                    interaction.options.getFocused();
+                    const focused =
+                        interaction.options.getFocused();
 
-                const result =
-                    await skillsDb.autocompleteSkills(
-                        focused
+                    const result =
+                        await skillsDb.autocompleteSkills(
+                            focused
+                        );
+
+                    await interaction.respond(
+                        result.map(row => ({
+                            name: row.internal_name_en,
+                            value: row.internal_name_en
+                        }))
                     );
 
-                console.log(
-                    result.map(row => ({
-                        name: row.internal_name_en,
-                        len: row.internal_name_en?.length
-                    }))
-                );
+                } catch (error) {
 
-                await interaction.respond(
-                    result.map(row => ({
-                        name: row.internal_name_en,
-                        value: row.internal_name_en
-                    }))
-                );
+                    logger.error(
+                        `autocomplete /${interaction.commandName}`,
+                        error
+                    );
 
-            } catch (error) {
+                }
 
-                console.error(
-                    'Autocomplete error:',
-                    error
-                );
+            });
 
-            }
-
-            return;
         }
 
         // =========================
@@ -166,25 +155,54 @@ client.on(
             return;
         }
 
-        if (
-            LOCAL_COMMANDS.has(
-                interaction.commandName
-            )
-        ) {
+        return logger.createContext(async () => {
 
-            return handleLocalCommand(
-                interaction,
-                client
-            );
+            const commandName = interaction.commandName;
 
-        }
+            try {
 
-        return handleWebhookCommand(
-            interaction
-        );
+                if (
+                    LOCAL_COMMANDS.has(commandName)
+                ) {
+
+                    return await handleLocalCommand(
+                        interaction,
+                        client
+                    );
+
+                }
+
+                return await handleWebhookCommand(
+                    interaction
+                );
+
+            } catch (error) {
+
+                logger.error(
+                    `/${commandName}`,
+                    error
+                );
+
+            }
+
+        });
+
     }
 
 );
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN)
+    .catch(error => {
+        console.error('==============================================================');
+        console.error('                  Still in Love Discord Bot');
+        console.error('==============================================================');
+        console.error('');
+        console.error('Status         : 🔴 STARTUP FAILED');
+        console.error('');
+        console.error('==============================================================');
+        console.error('Bot failed to start.');
+        console.error('==============================================================');
+        console.error(`Error: ${error.message}`);
+        process.exit(1);
+    });
 

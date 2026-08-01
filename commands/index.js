@@ -54,7 +54,7 @@ module.exports = [
     },
     {
         name: 'update',
-        description: 'Manual refresh First Data Uma.Moe',
+        description: 'Manual refresh Club Data and First fans',
         options: []
     },
     {

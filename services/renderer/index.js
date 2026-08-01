@@ -41,9 +41,9 @@ const {
 } = require('./rows');
 
 const {
-    renderLegacyBenchmark,
-    renderBenchmarkV2
-} = require('./benchmark');
+    renderTrainerBenchmark,
+    renderBenchmarkOverview
+} = require('./benchmark-renderer');
 
 async function renderTemplate(
     templateName,
@@ -120,7 +120,7 @@ async function renderTemplate(
 
     if (templateName !== 'benchmark') {
 
-    html = renderLegacyBenchmark(
+    html = renderTrainerBenchmark(
         html,
         data
     );
@@ -129,7 +129,7 @@ async function renderTemplate(
 
     if (templateName === 'benchmark' && data.current) {
 
-    html = renderBenchmarkV2(
+    html = renderBenchmarkOverview(
         html,
         data
     );

@@ -145,22 +145,255 @@ canvas{
 
 <script>
 
+// ---------------------------------------------------------------------------
+// Benchmark chart
+//
+// The data below is injected via the #chart-data JSON block and is NEVER
+// modified. Every adjustment in this file is purely visual (pixel-space) so
+// that axis values, tooltip values and exported numbers stay exact.
+// ---------------------------------------------------------------------------
+
 const chartData = JSON.parse(
     document.getElementById('chart-data').textContent
 );
 
+// ---------------------------------------------------------------------------
+// Series configuration.
+//
+// Add a new entry here (e.g. Top 50 / Top 200) to add a new benchmark line.
+// Each series gets a distinct colour, dash pattern and point style so lines
+// remain identifiable even before any fan-out offset is applied.
+// ---------------------------------------------------------------------------
+const seriesConfig = [
+    {
+        key: 'top10',
+        label: 'Top 10',
+        borderColor: '#ff4d4d',
+        backgroundColor: 'rgba(255,77,77,0.12)',
+        borderWidth: 4,
+        borderDash: [],
+        pointStyle: 'circle'
+    },
+    {
+        key: 'top30',
+        label: 'Top 30',
+        borderColor: '#ffd93d',
+        backgroundColor: 'rgba(255,217,61,0.12)',
+        borderWidth: 3,
+        borderDash: [8, 5],
+        pointStyle: 'triangle'
+    },
+    {
+        key: 'top100',
+        label: 'Top 100',
+        borderColor: '#61b8ff',
+        backgroundColor: 'rgba(97,184,255,0.12)',
+        borderWidth: 3,
+        borderDash: [2, 4],
+        pointStyle: 'rectRot'
+    }
+];
+
 const labels = chartData.map(x => "Day " + x.day);
 
-const top10 = chartData.map(x => x.top10);
-const top30 = chartData.map(x => x.top30);
-const top100 = chartData.map(x => x.top100);
-
-const allValues = [...top10, ...top30, ...top100].filter(v => v != null);
+const allValues = chartData
+    .flatMap(x => seriesConfig.map(cfg => x[cfg.key]))
+    .filter(v => v != null);
 
 const minValue = Math.min(...allValues);
 const maxValue = Math.max(...allValues);
 
-// Draw values above every point
+const datasets = seriesConfig.map(cfg => ({
+
+    label: cfg.label,
+
+    data: chartData.map(x => x[cfg.key]),
+
+    borderColor: cfg.borderColor,
+
+    backgroundColor: cfg.backgroundColor,
+
+    fill: true,
+
+    borderWidth: cfg.borderWidth,
+
+    borderDash: cfg.borderDash,
+
+    pointStyle: cfg.pointStyle,
+
+    pointRadius: 6,
+
+    pointHoverRadius: 7,
+
+    pointHoverBorderWidth: 4,
+
+    pointBorderWidth: 3,
+
+    pointBackgroundColor: "#111111",
+
+    tension: 0.45
+
+}));
+
+// ---------------------------------------------------------------------------
+// overlapSeparator plugin
+//
+// Problem: when two lines have nearly identical values (e.g. Top 10 and Top 30
+// only a few thousand fans apart), their rendered paths land on top of each
+// other and one line is hidden.
+//
+// Solution: detect those "too close" lines in PIXEL space and fan them out by
+// a tiny vertical offset while drawing. The offset is applied only to the
+// canvas transform inside the dataset draw hooks, so the underlying data, the
+// axis scale and the tooltip values are untouched.
+//
+// Detection:
+//   - For every pair of datasets compute the average distance (in pixels)
+//     between their rendered points (nulls ignored).
+//   - Pairs closer than `threshold` pixels are considered overlapping.
+//   - Datasets connected by overlap edges are grouped into clusters.
+//   - Each cluster is fanned out vertically, keeping higher values visually
+//     higher on the chart.
+//
+// When no pair is close enough, no offset is applied at all.
+// ---------------------------------------------------------------------------
+const overlapSeparator = {
+
+    id: 'overlapSeparator',
+
+    // Average pixel distance below which two lines are considered overlapping.
+    threshold: 8,
+
+    // Vertical gap (px) between fanned-out lines.
+    spacing: 10,
+
+    beforeDatasetsDraw(chart) {
+        chart._lineFanOffsets = computeFanOffsets(
+            chart,
+            this.threshold,
+            this.spacing
+        );
+    },
+
+    beforeDatasetDraw(chart, args) {
+        const dy = (chart._lineFanOffsets || [])[args.index] || 0;
+        if (dy !== 0) {
+            chart.ctx.save();
+            chart.ctx.translate(0, dy);
+        }
+    },
+
+    afterDatasetDraw(chart, args) {
+        const dy = (chart._lineFanOffsets || [])[args.index] || 0;
+        if (dy !== 0) {
+            chart.ctx.restore();
+        }
+    }
+
+};
+
+function computeFanOffsets(chart, threshold, spacing) {
+
+    const count = chart.data.datasets.length;
+    const offsets = new Array(count).fill(0);
+
+    if (count < 2) return offsets;
+
+    // 1. Find pairs of datasets rendered too close together.
+    const edges = [];
+    for (let i = 0; i < count; i++) {
+        for (let j = i + 1; j < count; j++) {
+            const distance = meanPixelDistance(chart, i, j);
+            if (distance != null && distance < threshold) {
+                edges.push([i, j]);
+            }
+        }
+    }
+
+    if (edges.length === 0) return offsets;
+
+    // 2. Group datasets connected through overlap edges into clusters.
+    const adjacency = Array.from({ length: count }, () => []);
+    for (const [i, j] of edges) {
+        adjacency[i].push(j);
+        adjacency[j].push(i);
+    }
+
+    const clusters = [];
+    const visited = new Array(count).fill(false);
+
+    for (let k = 0; k < count; k++) {
+        if (visited[k]) continue;
+        const cluster = [];
+        const stack = [k];
+        visited[k] = true;
+        while (stack.length) {
+            const node = stack.pop();
+            cluster.push(node);
+            for (const neighbor of adjacency[node]) {
+                if (!visited[neighbor]) {
+                    visited[neighbor] = true;
+                    stack.push(neighbor);
+                }
+            }
+        }
+        if (cluster.length > 1) clusters.push(cluster);
+    }
+
+    // 3. Fan each cluster out, keeping higher values visually higher.
+    for (const cluster of clusters) {
+        const ordered = cluster
+            .slice()
+            .sort(
+                (a, b) =>
+                    averageValue(chart.data.datasets[b].data) -
+                    averageValue(chart.data.datasets[a].data)
+            );
+
+        const middle = (ordered.length - 1) / 2;
+        ordered.forEach((datasetIndex, position) => {
+            offsets[datasetIndex] = Math.round((position - middle) * spacing);
+        });
+    }
+
+    return offsets;
+
+}
+
+function meanPixelDistance(chart, datasetIndexA, datasetIndexB) {
+
+    const metaA = chart.getDatasetMeta(datasetIndexA);
+    const metaB = chart.getDatasetMeta(datasetIndexB);
+
+    let total = 0;
+    let points = 0;
+
+    const length = Math.min(metaA.data.length, metaB.data.length);
+
+    for (let k = 0; k < length; k++) {
+        const pointA = metaA.data[k];
+        const pointB = metaB.data[k];
+        if (!pointA || !pointB) continue;
+        if (pointA.y == null || pointB.y == null) continue;
+        total += Math.abs(pointA.y - pointB.y);
+        points++;
+    }
+
+    if (points === 0) return null;
+
+    return total / points;
+
+}
+
+function averageValue(data) {
+
+    const values = (data || []).filter(v => v != null);
+    if (values.length === 0) return 0;
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+
+}
+
+// Draw values above every point, aligned with any applied fan offset.
 const valueLabelPlugin = {
 
     id: 'valueLabel',
@@ -175,9 +408,12 @@ const valueLabelPlugin = {
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
 
+        const offsets = chart._lineFanOffsets || chart.data.datasets.map(() => 0);
+
         chart.data.datasets.forEach((dataset, datasetIndex) => {
 
             const meta = chart.getDatasetMeta(datasetIndex);
+            const offset = offsets[datasetIndex] || 0;
 
             meta.data.forEach((point, index) => {
 
@@ -188,7 +424,7 @@ const valueLabelPlugin = {
                 ctx.fillText(
                     (value / 1000000).toFixed(1) + "M",
                     point.x,
-                    point.y - 14
+                    point.y + offset - 14
                 );
 
             });
@@ -211,87 +447,7 @@ new Chart(
 
             labels,
 
-            datasets: [
-
-                {
-
-                    label: "Top 10",
-
-                    data: top10,
-
-                    borderColor: "#ff4d4d",
-
-                    backgroundColor: "rgba(255,77,77,0.12)",
-
-                    fill: true,
-
-                    borderWidth: 4,
-
-                    pointRadius: 6,
-
-                    pointHoverRadius: 7,
-
-                    pointBorderWidth: 3,
-
-                    pointBackgroundColor: "#111111",
-
-                    tension: 0.45
-
-                },
-
-                {
-
-                    label: "Top 30",
-
-                    data: top30,
-
-                    borderColor: "#ffd93d",
-
-                    backgroundColor: "rgba(255,217,61,0.12)",
-
-                    fill: true,
-
-                    borderWidth: 4,
-
-                    pointRadius: 6,
-
-                    pointHoverRadius: 7,
-
-                    pointBorderWidth: 3,
-
-                    pointBackgroundColor: "#111111",
-
-                    tension: 0.45
-
-                },
-
-                {
-
-                    label: "Top 100",
-
-                    data: top100,
-
-                    borderColor: "#61b8ff",
-
-                    backgroundColor: "rgba(97,184,255,0.12)",
-
-                    fill: true,
-
-                    borderWidth: 4,
-
-                    pointRadius: 6,
-
-                    pointHoverRadius: 7,
-
-                    pointBorderWidth: 3,
-
-                    pointBackgroundColor: "#111111",
-
-                    tension: 0.45
-
-                }
-
-            ]
+            datasets
 
         },
 
@@ -399,7 +555,7 @@ new Chart(
 
         },
 
-        plugins: [valueLabelPlugin]
+        plugins: [overlapSeparator, valueLabelPlugin]
 
     }
 );

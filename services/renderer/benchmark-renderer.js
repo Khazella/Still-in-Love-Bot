@@ -1,9 +1,10 @@
 /**
- * Benchmark HTML generation for both legacy and v2 formats.
+ * Benchmark HTML generation for trainer/club reports
+ * and the standalone benchmark overview page.
  */
 
 /**
- * Render the legacy benchmark section (used by Trainer
+ * Render the trainer benchmark section (used by Trainer
  * and Club reports that are NOT the benchmark template).
  * Generates projection rows and week-based ranking rows.
  *
@@ -11,7 +12,7 @@
  * @param {object} data - report data
  * @returns {string} HTML with benchmark placeholders replaced
  */
-function renderLegacyBenchmark(html, data) {
+function renderTrainerBenchmark(html, data) {
 
     const benchmarkRows =
         data.rows || [];
@@ -66,7 +67,7 @@ function renderLegacyBenchmark(html, data) {
 }
 
 /**
- * Render the new benchmark v2 section (used only by the
+ * Render the benchmark overview section (used only by the
  * benchmark template with data.current).
  * Generates Top 10/30/100 projection rows.
  *
@@ -74,7 +75,7 @@ function renderLegacyBenchmark(html, data) {
  * @param {object} data - report data (must have data.current)
  * @returns {string} HTML with benchmark placeholders replaced
  */
-function renderBenchmarkV2(html, data) {
+function renderBenchmarkOverview(html, data) {
 
     const projectionRows = [
         {
@@ -117,6 +118,6 @@ function renderBenchmarkV2(html, data) {
 }
 
 module.exports = {
-    renderLegacyBenchmark,
-    renderBenchmarkV2
+    renderTrainerBenchmark,
+    renderBenchmarkOverview
 };

@@ -14,6 +14,13 @@ const {
 const registerMentionHandler =
     require('../handlers/mention');
 
+const {
+    handleTimerButton
+} = require('../handlers/trainer-timer');
+
+const timerManager =
+    require('../services/trainer-timer/timer-manager');
+
 const skillsDb =
     require('../services/database/skills');
 
@@ -49,6 +56,12 @@ client.once('clientReady', async () => {
     const dbStatus = await dbPromise;
     const { printStartupBanner } = require('../services/startup-banner');
     printStartupBanner(client, BOT_START_TIME, dbStatus);
+
+    // Trainer timer startup recovery + monitoring loop.
+    timerManager.init(client)
+        .catch(error => {
+            logger.error('Trainer Timer init', error);
+        });
 });
 
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
@@ -143,6 +156,18 @@ client.on(
                 }
 
             });
+
+        }
+
+        // =========================
+        // BUTTON INTERACTIONS
+        // =========================
+        if (interaction.isButton()) {
+
+            return await handleTimerButton(
+                interaction,
+                client
+            );
 
         }
 

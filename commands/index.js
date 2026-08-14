@@ -58,16 +58,6 @@ module.exports = [
         options: []
     },
     {
-        name: 'update-cm',
-        description: 'Manual refresh CM Data GameTora.com',
-        options: []
-    },
-    {
-        name: 'update-skills',
-        description: 'Manual refresh Skills Data GameTora.com',
-        options: []
-    },
-    {
         name: 'benchmark',
         description: 'Club benchmark requirements',
         options: []
@@ -150,32 +140,6 @@ module.exports = [
         ]
     },
     {
-        name: 'cm',
-        description: 'Champion Meeting Track',
-        options: [
-            {
-                name: 'cm-numbers',
-                description: 'Umamusume Champion Meetings Numbers',
-                required: true,
-                type: 4,   // INTEGER
-                required: true,
-            }
-        ]
-    },
-    {
-        name: 'skill',
-        description: 'Show Uma Musume skill information',
-        options: [
-            {
-            name: 'name',
-            description: 'Skill name',
-            type: 3,
-            required: true,
-            autocomplete: true
-            }
-        ]
-    },
-    {
         name: 'quota-view',
         description: 'View club quota settings',
         options: [
@@ -228,5 +192,10 @@ module.exports = [
                 required: true
             }
         ]
+    },
+    {
+        name: 'timer-board',
+        description: 'Create or refresh the trainer timer board in this thread',
+        options: []
     }
 ];

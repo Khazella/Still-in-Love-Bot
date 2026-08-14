@@ -4,7 +4,8 @@ const LOCAL_COMMANDS = new Set([
     'club-report',
     'trainer',
     'quota-view',
-    'quota-set'
+    'quota-set',
+    'timer-board'
 ]);
 
 const {
@@ -40,6 +41,10 @@ const {
     getQuotaInfo
 } = require('../services/calculations/quota');
 
+const {
+    handleTimerBoardCommand
+} = require('./trainer-timer');
+
 async function handleLocalCommand(
     interaction,
     client
@@ -52,7 +57,13 @@ async function handleLocalCommand(
 
     const startTime = Date.now();
 
-    await interaction.deferReply();
+    // The timer-board setup command replies ephemeral.
+    const isTimerBoardCommand =
+        interaction.commandName === 'timer-board';
+
+    await interaction.deferReply({
+        ephemeral: isTimerBoardCommand
+    });
 
     const options = {};
 
@@ -62,6 +73,26 @@ async function handleLocalCommand(
     ) {
         options[option.name] =
             option.value;
+    }
+
+    // =========================
+    // LOCAL TIMER-BOARD SETUP
+    // =========================
+
+    if (
+        interaction.commandName ===
+        'timer-board'
+    ) {
+
+        await handleTimerBoardCommand(
+            interaction,
+            client
+        );
+
+        logger.done(`/${commandName}`, Date.now() - startTime);
+
+        return;
+
     }
 
     // =========================

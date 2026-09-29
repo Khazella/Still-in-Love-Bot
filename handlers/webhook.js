@@ -14,6 +14,19 @@ const {
     renderTemplate
 } = require('../services/renderer');
 
+const benchmarkDb =
+    require('../services/database/benchmark');
+
+const {
+    CLUB_FIRST_NAME,
+    toJakartaDate,
+    getMonthRange,
+    buildClubDailyGrowth,
+    mergeClubGrowthIntoChart,
+    getLatestSnapshot,
+    buildClubBenchmarkRow
+} = require('../services/calculations/benchmark');
+
 // =========================
 // TITLE FORMAT
 // =========================
@@ -192,6 +205,98 @@ function buildNormalEmbed(
 }
 
 // =========================
+// BENCHMARK CLUB SERIES
+// =========================
+/**
+ * Add Club "First" to the benchmark output.
+ *
+ *  - The Daily Benchmark Growth chart gets a `first` value on every
+ *    row, using the exact same daily-growth definition as the
+ *    Top 10 / Top 30 / Top 100 lines and the same day alignment.
+ *  - The Current Benchmark table gets a `first` row whose Entry /
+ *    Average figures use the same methodology as the benchmark rows.
+ *
+ * Nothing from the existing benchmark response is altered; the club
+ * data is only added. Failure is logged and ignored so /benchmark
+ * still renders with the original benchmark output.
+ *
+ * @param {object} data - normalized benchmark response
+ */
+async function attachClubFirstSeries(data) {
+
+    if (
+        !Array.isArray(data?.chart) ||
+        data.chart.length === 0
+    ) {
+        return;
+    }
+
+    try {
+
+        const referenceDate =
+            data.snapshot_date
+                ? new Date(data.snapshot_date)
+                : new Date();
+
+        const reference =
+            Number.isNaN(
+                referenceDate.getTime()
+            )
+                ? toJakartaDate(new Date())
+                : toJakartaDate(referenceDate);
+
+        const {
+            startDate,
+            endDate
+        } = getMonthRange(
+            reference.getFullYear(),
+            reference.getMonth() + 1
+        );
+
+        const snapshots =
+            await benchmarkDb.getClubSnapshots(
+                CLUB_FIRST_NAME,
+                startDate,
+                endDate
+            );
+
+        const growth =
+            buildClubDailyGrowth(snapshots);
+
+        data.chart =
+            mergeClubGrowthIntoChart(
+                data.chart,
+                growth
+            );
+
+        // Current Benchmark row for Club First.
+        // The benchmark divides cumulative fans by the number of
+        // benchmark days, which is exactly the chart row count.
+        const latest =
+            getLatestSnapshot(snapshots);
+
+        if (latest && data.current) {
+
+            data.current.first =
+                buildClubBenchmarkRow(
+                    latest.fans,
+                    data.chart.length
+                );
+
+        }
+
+    } catch (error) {
+
+        logger.error(
+            'benchmark.attachClubFirstSeries()',
+            error
+        );
+
+    }
+
+}
+
+// =========================
 // WEBHOOK COMMANDS
 // =========================
 async function handleWebhookCommand(
@@ -239,6 +344,15 @@ async function handleWebhookCommand(
             normalizeN8nResponse(
                 response.data
             );
+
+        if (
+            interaction.commandName ===
+            'benchmark'
+        ) {
+
+            await attachClubFirstSeries(data);
+
+        }
 
         const templateResolver =
             IMAGE_COMMANDS[

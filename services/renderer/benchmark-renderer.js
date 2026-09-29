@@ -77,7 +77,22 @@ function renderTrainerBenchmark(html, data) {
  */
 function renderBenchmarkOverview(html, data) {
 
-    const projectionRows = [
+    const rows = [];
+
+    // Club "First" is shown ahead of the benchmark tiers when the
+    // club series has been attached. Its Entry/Average use the same
+    // methodology as the Top 10 / Top 30 / Top 100 rows.
+    if (data.current.first) {
+
+        rows.push({
+            section: 'First',
+            entry: data.current.first.entry,
+            average: data.current.first.average
+        });
+
+    }
+
+    rows.push(
         {
             section: 'Top 10',
             entry: data.current.top10.entry,
@@ -93,7 +108,9 @@ function renderBenchmarkOverview(html, data) {
             entry: data.current.top100.entry,
             average: data.current.top100.average
         }
-    ]
+    );
+
+    const projectionRows = rows
     .map(row => `
         <tr>
             <td>${row.section}</td>

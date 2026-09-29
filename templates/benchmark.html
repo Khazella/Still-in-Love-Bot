@@ -168,8 +168,8 @@ const seriesConfig = [
     {
         key: 'top10',
         label: 'Top 10',
-        borderColor: '#ff4d4d',
-        backgroundColor: 'rgba(255,77,77,0.12)',
+        borderColor: '#ff8c00',
+        backgroundColor: 'rgba(255,140,0,0.12)',
         borderWidth: 4,
         borderDash: [],
         pointStyle: 'circle'
@@ -191,6 +191,20 @@ const seriesConfig = [
         borderWidth: 3,
         borderDash: [2, 4],
         pointStyle: 'rectRot'
+    },
+    {
+        // Club "First" daily growth, injected by the bot as `first`.
+        // Uses the former Top 10 colour and keeps the same day index
+        // and unit as the benchmark lines. Drawn without a filled
+        // area so it never hides the benchmark lines underneath.
+        key: 'first',
+        label: 'First',
+        borderColor: '#ff4d4d',
+        backgroundColor: 'rgba(255,77,77,0.12)',
+        fill: false,
+        borderWidth: 4,
+        borderDash: [4, 3],
+        pointStyle: 'rect'
     }
 ];
 
@@ -213,7 +227,7 @@ const datasets = seriesConfig.map(cfg => ({
 
     backgroundColor: cfg.backgroundColor,
 
-    fill: true,
+    fill: cfg.fill ?? true,
 
     borderWidth: cfg.borderWidth,
 
@@ -248,12 +262,16 @@ const datasets = seriesConfig.map(cfg => ({
 // axis scale and the tooltip values are untouched.
 //
 // Detection:
-//   - For every pair of datasets compute the average distance (in pixels)
-//     between their rendered points (nulls ignored).
-//   - Pairs closer than `threshold` pixels are considered overlapping.
+//   - For every pair of datasets compare their rendered points (nulls ignored).
+//     They overlap when their average pixel distance is below `threshold`, OR
+//     when at least `closeFraction` of the days sit within `threshold`.
 //   - Datasets connected by overlap edges are grouped into clusters.
 //   - Each cluster is fanned out vertically, keeping higher values visually
 //     higher on the chart.
+//
+// The second (fraction) test keeps lines that hug on many days separated even
+// when they diverge elsewhere (e.g. Club First vs Top 100), while leaving
+// lines that only cross occasionally untouched.
 //
 // When no pair is close enough, no offset is applied at all.
 // ---------------------------------------------------------------------------
@@ -261,8 +279,12 @@ const overlapSeparator = {
 
     id: 'overlapSeparator',
 
-    // Average pixel distance below which two lines are considered overlapping.
+    // Pixel distance below which two points are considered overlapping.
     threshold: 8,
+
+    // Share of days that must sit within `threshold` for a pair to count
+    // as overlapping even when its average distance is larger.
+    closeFraction: 0.25,
 
     // Vertical gap (px) between fanned-out lines.
     spacing: 10,
@@ -271,7 +293,8 @@ const overlapSeparator = {
         chart._lineFanOffsets = computeFanOffsets(
             chart,
             this.threshold,
-            this.spacing
+            this.spacing,
+            this.closeFraction
         );
     },
 
@@ -292,7 +315,7 @@ const overlapSeparator = {
 
 };
 
-function computeFanOffsets(chart, threshold, spacing) {
+function computeFanOffsets(chart, threshold, spacing, closeFraction) {
 
     const count = chart.data.datasets.length;
     const offsets = new Array(count).fill(0);
@@ -303,8 +326,7 @@ function computeFanOffsets(chart, threshold, spacing) {
     const edges = [];
     for (let i = 0; i < count; i++) {
         for (let j = i + 1; j < count; j++) {
-            const distance = meanPixelDistance(chart, i, j);
-            if (distance != null && distance < threshold) {
+            if (pairsOverlap(chart, i, j, threshold, closeFraction)) {
                 edges.push([i, j]);
             }
         }
@@ -360,13 +382,14 @@ function computeFanOffsets(chart, threshold, spacing) {
 
 }
 
-function meanPixelDistance(chart, datasetIndexA, datasetIndexB) {
+function pairsOverlap(chart, datasetIndexA, datasetIndexB, threshold, closeFraction) {
 
     const metaA = chart.getDatasetMeta(datasetIndexA);
     const metaB = chart.getDatasetMeta(datasetIndexB);
 
     let total = 0;
     let points = 0;
+    let close = 0;
 
     const length = Math.min(metaA.data.length, metaB.data.length);
 
@@ -375,13 +398,18 @@ function meanPixelDistance(chart, datasetIndexA, datasetIndexB) {
         const pointB = metaB.data[k];
         if (!pointA || !pointB) continue;
         if (pointA.y == null || pointB.y == null) continue;
-        total += Math.abs(pointA.y - pointB.y);
+        const distance = Math.abs(pointA.y - pointB.y);
+        total += distance;
+        if (distance < threshold) close++;
         points++;
     }
 
-    if (points === 0) return null;
+    if (points === 0) return false;
 
-    return total / points;
+    return (
+        total / points < threshold ||
+        close / points >= closeFraction
+    );
 
 }
 
@@ -437,6 +465,10 @@ const valueLabelPlugin = {
 
 };
 
+// Readiness flag: the screenshot is only taken after Chart.js has
+// finished its first draw. Puppeteer waits on this flag.
+window.__chartReady = false;
+
 new Chart(
     document.getElementById("benchmarkChart"),
     {
@@ -456,6 +488,16 @@ new Chart(
             responsive: true,
 
             maintainAspectRatio: false,
+
+            animation: {
+
+                onComplete: () => {
+
+                    window.__chartReady = true;
+
+                }
+
+            },
 
             interaction: {
 

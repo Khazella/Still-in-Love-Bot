@@ -48,6 +48,19 @@ async function screenshot(html) {
             }
         );
 
+        // Chart templates set window.__chartReady = false before the
+        // chart is created and true once Chart.js has finished its
+        // first draw. Wait for that signal so the screenshot is taken
+        // after the chart has fully rendered. Templates that never set
+        // the flag resolve immediately, and the timeout keeps the
+        // command from hanging if rendering never completes.
+        await page
+            .waitForFunction(
+                () => window.__chartReady !== false,
+                { timeout: 5000, polling: 100 }
+            )
+            .catch(() => {});
+
         const buffer = await page.screenshot({
             type: 'png',
             fullPage: true

@@ -24,6 +24,9 @@ const timerManager =
 const skillsDb =
     require('../services/database/skills');
 
+const registrationDb =
+    require('../services/database/registration');
+
 const {
     Client,
     GatewayIntentBits,
@@ -55,6 +58,14 @@ registerMentionHandler(client);
 client.once('clientReady', async () => {
     const dbStatus = await dbPromise;
     const { printStartupBanner } = require('../services/startup-banner');
+
+    // Create the Discord registration table if it does not exist.
+    try {
+        await registrationDb.ensureSchema();
+    } catch (error) {
+        logger.error('registration.ensureSchema()', error);
+    }
+
     printStartupBanner(client, BOT_START_TIME, dbStatus);
 
     // Trainer timer startup recovery + monitoring loop.

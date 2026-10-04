@@ -140,6 +140,18 @@ module.exports = [
         ]
     },
     {
+        name: 'register',
+        description: 'Register your permanent Trainer ID (viewer_id) with Club First',
+        options: [
+            {
+                name: 'trainer_id',
+                description: 'Your permanent in-game Trainer ID (viewer_id)',
+                required: true,
+                type: 3   // STRING
+            }
+        ]
+    },
+    {
         name: 'quota-view',
         description: 'View club quota settings',
         options: [

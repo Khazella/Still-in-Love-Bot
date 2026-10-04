@@ -5,7 +5,9 @@ const LOCAL_COMMANDS = new Set([
     'trainer',
     'quota-view',
     'quota-set',
-    'timer-board'
+    'timer-board',
+    'register',
+    'benchmark'
 ]);
 
 const {
@@ -24,6 +26,13 @@ const trainerDb =
 
 const clubSettingsDb =
     require('../services/database/club-settings');
+
+const benchmarkDb =
+    require('../services/database/benchmark');
+
+const {
+    calculateBenchmark
+} = require('../services/calculations/benchmark');
 
 const weeklyFans =
     require('../services/club-report/weekly');
@@ -45,6 +54,10 @@ const {
     handleTimerBoardCommand
 } = require('./trainer-timer');
 
+const {
+    handleRegisterCommand
+} = require('./register');
+
 async function handleLocalCommand(
     interaction,
     client
@@ -57,12 +70,13 @@ async function handleLocalCommand(
 
     const startTime = Date.now();
 
-    // The timer-board setup command replies ephemeral.
-    const isTimerBoardCommand =
-        interaction.commandName === 'timer-board';
+    // Commands that reply ephemeral so their output stays private.
+    const isEphemeralCommand =
+        interaction.commandName === 'timer-board' ||
+        interaction.commandName === 'register';
 
     await interaction.deferReply({
-        ephemeral: isTimerBoardCommand
+        ephemeral: isEphemeralCommand
     });
 
     const options = {};
@@ -87,6 +101,25 @@ async function handleLocalCommand(
         await handleTimerBoardCommand(
             interaction,
             client
+        );
+
+        logger.done(`/${commandName}`, Date.now() - startTime);
+
+        return;
+
+    }
+
+    // =========================
+    // LOCAL REGISTER (viewer_id)
+    // =========================
+
+    if (
+        interaction.commandName ===
+        'register'
+    ) {
+
+        await handleRegisterCommand(
+            interaction
         );
 
         logger.done(`/${commandName}`, Date.now() - startTime);
@@ -422,6 +455,85 @@ async function handleLocalCommand(
         logger.done(`/${commandName}`, Date.now() - startTime);
 
         return;
+
+    }
+
+    // =========================
+    // LOCAL BENCHMARK
+    // =========================
+
+    if (
+        interaction.commandName ===
+        'benchmark'
+    ) {
+
+        try {
+
+            const t1 = Date.now();
+
+            const rows =
+                await benchmarkDb.getBenchmarkMonthRows();
+
+            logger.service(
+                'benchmark.getBenchmarkMonthRows()',
+                Date.now() - t1
+            );
+
+            const report =
+                calculateBenchmark(rows);
+
+            if (!report) {
+
+                await interaction.editReply(
+                    'No benchmark snapshots are available yet. Please try again once the daily snapshot has been recorded.'
+                );
+
+                logger.done(`/${commandName}`, Date.now() - startTime);
+
+                return;
+
+            }
+
+            const t2 = Date.now();
+
+            const imageBuffer =
+                await renderTemplate(
+                    'benchmark',
+                    report
+                );
+
+            logger.render('renderTemplate("benchmark")', Date.now() - t2);
+
+            const attachment =
+                new AttachmentBuilder(
+                    imageBuffer,
+                    {
+                        name: 'benchmark.png'
+                    }
+                );
+
+            await interaction.editReply({
+                files: [attachment]
+            });
+
+            logger.done(`/${commandName}`, Date.now() - startTime);
+
+            return;
+
+        } catch (error) {
+
+            logger.error(
+                'benchmark command',
+                error
+            );
+
+            await interaction.editReply(
+                'Still in Love could not build the benchmark right now. Please try again later.'
+            );
+
+            return;
+
+        }
 
     }
 

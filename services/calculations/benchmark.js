@@ -1,196 +1,82 @@
 /**
- * Daily-growth calculations for the benchmark chart.
+ * Benchmark calculation for the /benchmark command.
  *
- * The Entry Rank benchmark lines produced by the benchmark workflow are
- * defined as:
+ * The bot owns the benchmark calculation now: it reads the daily
+ * `benchmark_snapshot` rows from PostgreSQL and builds the same result
+ * the n8n "Benchmark Calculator" used to produce:
  *
- *     day N = ( fans(snapshot N + 1) - fans(snapshot N) ) / 30
+ *   {
+ *       snapshot_date,
+ *       snapshot_time,
+ *       current,   // { top10, top30, top100, first }
+ *       chart      // [ { day, top10, top30, top100, first }, ... ]
+ *   }
  *
- * where:
- *   - the divisor is the standard club size (30 members), which is the
- *     "Fans / Member / Day" unit shown on the chart, and
- *   - the first day of the month is measured from a 0 baseline because
- *     the fan counter resets at the start of every month.
+ * Definitions (unchanged from the n8n workflow):
+ *   - "Entry"  = the boundary club's cumulative fans, converted to
+ *                Fans / Member / Day via dailyPerMember().
+ *   - "Average"= the mean cumulative fans of the row's band, converted
+ *                the same way. Bands are [1-10], [11-30], [31-100].
+ *   - chart day 1 = fans / 30, later days = (fans - previous) / 30.
  *
- * Club "First" must use the exact same definition so both series can be
- * compared on the same axis, so the helpers below are intentionally
- * written to mirror that calculation.
+ * Club "First" is carried through as an extra row/series using the
+ * exact same definitions, so it stays comparable with the benchmark
+ * tiers.
  */
 
-// Standard club size used by the Entry Rank benchmark series.
+// Standard club size used by the benchmark.
 const MEMBERS_PER_BENCHMARK = 30;
 
 // Club whose daily growth is overlaid on the benchmark chart.
 const CLUB_FIRST_NAME = 'First';
 
-/**
- * Convert a Date to the Asia/Jakarta wall clock.
- *
- * Mirrors the timezone handling already used by the bot
- * (see services/calculations/quota.js) so the benchmark month is the
- * same "Uma day" month that the snapshot belongs to.
- *
- * @param {Date} date
- * @returns {Date}
- */
-function toJakartaDate(date) {
-
-    return new Date(
-        date.toLocaleString(
-            'en-US',
-            {
-                timeZone: 'Asia/Jakarta'
-            }
-        )
-    );
-
-}
+// =======================================================
+// HELPERS (mirror the n8n Benchmark Calculator)
+// =======================================================
 
 /**
- * Build the inclusive 'YYYY-MM-DD' bounds of a month.
+ * Safe rank lookup. A temporarily missing rank resolves to a zero-fans
+ * club so the benchmark never crashes.
  *
- * @param {number} year
- * @param {number} month - 1-based month
- * @returns {{startDate: string, endDate: string}}
+ * @param {Array<object>} list
+ * @param {number} rank
+ * @returns {object}
  */
-function getMonthRange(year, month) {
+function entry(list, rank) {
 
-    const lastDay =
-        new Date(
-            Date.UTC(year, month, 0)
-        ).getUTCDate();
-
-    const pad =
-        value => String(value).padStart(2, '0');
-
-    return {
-        startDate:
-            `${year}-${pad(month)}-01`,
-        endDate:
-            `${year}-${pad(month)}-${pad(lastDay)}`
+    return (list || []).find(
+        club => club.rank === rank
+    ) ?? {
+        rank,
+        fans: 0,
+        memberCount: MEMBERS_PER_BENCHMARK
     };
 
 }
 
 /**
- * Build per-day daily growth for a club from its stored snapshots.
+ * Mean of a club list's total fans.
  *
- * Same definition as the Entry Rank benchmark:
- *   growth(day N) = ( fans(N + 1) - fans(N) ) / divisor
- *
- * Days whose snapshot (or the following day's snapshot) is missing are
- * left unset, letting the chart render a gap instead of shifting the
- * rest of the series.
- *
- * @param {Array<{snapshot_date: Date, fans: string|number}>} snapshots
- * @param {number} [divisor]
- * @returns {Record<number, number>} day-of-month -> growth
+ * @param {Array<object>} list
+ * @returns {number}
  */
-function buildClubDailyGrowth(
-    snapshots,
-    divisor = MEMBERS_PER_BENCHMARK
-) {
+function average(list) {
 
-    const fansByDay = {};
-
-    for (const snapshot of snapshots || []) {
-
-        const day =
-            new Date(
-                snapshot.snapshot_date
-            ).getUTCDate();
-
-        fansByDay[day] =
-            Number(snapshot.fans) || 0;
-
+    if (!list || !list.length) {
+        return 0;
     }
 
-    const growth = {};
-
-    const days =
-        Object.keys(fansByDay)
-            .map(Number);
-
-    if (days.length === 0) {
-        return growth;
-    }
-
-    const lastDay =
-        Math.max(...days);
-
-    for (
-        let day = 1;
-        day < lastDay;
-        day++
-    ) {
-
-        const current =
-            fansByDay[day + 1];
-
-        if (current === undefined) {
-            continue;
-        }
-
-        let previous;
-
-        if (day === 1) {
-
-            // The fan counter resets on the 1st, so the first day is
-            // measured from zero (identical to the Entry Rank series).
-            previous = 0;
-
-        } else if (fansByDay[day] === undefined) {
-
-            // Missing previous snapshot: skip this day so the chart
-            // keeps every value on its correct date.
-            continue;
-
-        } else {
-
-            previous = fansByDay[day];
-
-        }
-
-        growth[day] =
-            Math.round(
-                (current - previous) / divisor
-            );
-
-    }
-
-    return growth;
+    return (
+        list.reduce(
+            (sum, club) => sum + club.fans,
+            0
+        ) / list.length
+    );
 
 }
 
 /**
- * Return a copy of the benchmark chart rows with the club growth added
- * as the `first` key on the matching day. Rows without club data get
- * `null`, which the chart renderer renders as a gap.
- *
- * @param {Array<{day: number}>} chart
- * @param {Record<number, number>} growth
- * @returns {Array<object>}
- */
-function mergeClubGrowthIntoChart(chart, growth) {
-
-    return (chart || []).map(row => ({
-
-        ...row,
-
-        first:
-            growth[row.day] ?? null
-
-    }));
-
-}
-
-/**
- * Mirror of the benchmark workflow's dailyPerMember() helper:
- *
- *     Math.round(fans / 30 / day)
- *
- * Turns a club's cumulative fan count into the "Fans / Member / Day"
- * figure shown in the Current Benchmark table.
+ * Convert cumulative fans into the "Fans / Member / Day" figure.
  *
  * @param {number|string} fans
  * @param {number} day
@@ -207,54 +93,383 @@ function dailyPerMember(fans, day) {
 }
 
 /**
- * Build the Club "First" row for the Current Benchmark table using the
- * exact Entry/Average methodology of the Top 10 / Top 30 / Top 100 rows.
+ * Render a 'YYYY-MM-DD' snapshot date the way the benchmark workflow
+ * saw it.
  *
- * In the benchmark, "Entry" is the boundary club's rate and "Average"
- * is the mean rate of the row's group of clubs. For a single club the
- * boundary and the group are both First, so the two figures are equal
- * (this is what the generic buildSnapshot() produces for a one-club
- * group).
+ * The snapshot DATE is interpreted in Asia/Jakarta (UTC+7). The
+ * workflow received it as a JS date and read the day off its ISO
+ * serialisation, which lands on the previous UTC day
+ * (e.g. 2026-09-29 -> "2026-09-28T17:00:00.000Z"). Reproducing that
+ * keeps the current values identical.
  *
- * @param {number|string} clubFans - First's cumulative fans
- * @param {number} benchmarkDay - number of benchmark days so far
- * @returns {{entry: number, average: number}}
+ * @param {string} snapshotDate - 'YYYY-MM-DD'
+ * @returns {string} ISO string
  */
-function buildClubBenchmarkRow(clubFans, benchmarkDay) {
+function snapshotIsoDate(snapshotDate) {
 
-    const value =
-        dailyPerMember(clubFans, benchmarkDay);
+    const [
+        year,
+        month,
+        day
+    ] = String(snapshotDate)
+        .split('-')
+        .map(Number);
 
-    return {
-        entry: value,
-        average: value
-    };
+    return new Date(
+        Date.UTC(year, month - 1, day) -
+        7 * 60 * 60 * 1000
+    ).toISOString();
 
 }
 
 /**
- * Return the most recent snapshot entry from a list of snapshots.
+ * Benchmark day used by the "Current" table.
  *
- * @param {Array<{snapshot_date: Date}>} snapshots
- * @returns {object|null}
+ * @param {string} snapshotDate - 'YYYY-MM-DD'
+ * @returns {number}
  */
-function getLatestSnapshot(snapshots) {
+function currentDay(snapshotDate) {
 
-    let latest = null;
+    const iso =
+        snapshotIsoDate(snapshotDate);
 
-    for (const snapshot of snapshots || []) {
+    const day =
+        Number(iso.substring(8, 10));
 
-        if (
-            !latest ||
-            new Date(snapshot.snapshot_date) >
-            new Date(latest.snapshot_date)
-        ) {
-            latest = snapshot;
+    const year =
+        Number(iso.substring(0, 4));
+
+    const month =
+        Number(iso.substring(5, 7));
+
+    if (day === 1) {
+
+        return new Date(
+            Date.UTC(year, month - 1, 0)
+        ).getUTCDate();
+
+    }
+
+    return day;
+
+}
+
+/**
+ * Chart day label.
+ *
+ * @param {string} snapshotDate - 'YYYY-MM-DD'
+ * @returns {number}
+ */
+function chartDay(snapshotDate) {
+
+    const iso =
+        snapshotIsoDate(snapshotDate);
+
+    const day =
+        Number(iso.substring(8, 10));
+
+    const year =
+        Number(iso.substring(0, 4));
+
+    const month =
+        Number(iso.substring(5, 7));
+
+    if (day === 1) {
+
+        return new Date(
+            Date.UTC(year, month - 1, 0)
+        ).getUTCDate();
+
+    }
+
+    return day - 1;
+
+}
+
+// =======================================================
+// MAIN
+// =======================================================
+
+/**
+ * Build the benchmark result from raw snapshot rows.
+ *
+ * @param {Array<object>} rows - rows from getBenchmarkMonthRows()
+ * @param {string} [clubName] - club to add as the extra series
+ * @returns {object|null} benchmark result, or null when there is no data
+ */
+function calculateBenchmark(
+    rows,
+    clubName = CLUB_FIRST_NAME
+) {
+
+    const clubs =
+        (rows || []).map(row => ({
+
+            snapshotDate:
+                String(row.snapshot_date),
+
+            snapshotTime:
+                row.snapshot_time,
+
+            rank:
+                Number(row.rank),
+
+            clubName:
+                row.club_name,
+
+            fans:
+                Number(row.fans),
+
+            memberCount:
+                Number(
+                    row.member_count ??
+                    MEMBERS_PER_BENCHMARK
+                )
+
+        }));
+
+    if (clubs.length === 0) {
+        return null;
+    }
+
+    // Group by snapshot date.
+    const byDate = {};
+
+    for (const club of clubs) {
+
+        if (!byDate[club.snapshotDate]) {
+            byDate[club.snapshotDate] = [];
+        }
+
+        byDate[club.snapshotDate].push(club);
+
+    }
+
+    const snapshotDates =
+        Object.keys(byDate).sort();
+
+    if (snapshotDates.length === 0) {
+        return null;
+    }
+
+    const latestDate =
+        snapshotDates[snapshotDates.length - 1];
+
+    const latestSnapshot =
+        byDate[latestDate];
+
+    // Club fans keyed by date, for the extra series.
+    const clubFansByDate = {};
+
+    for (const club of clubs) {
+
+        if (club.clubName === clubName) {
+            clubFansByDate[club.snapshotDate] =
+                club.fans;
         }
 
     }
 
-    return latest;
+    const hasClub =
+        Object.keys(clubFansByDate).length > 0;
+
+    // ===================================================
+    // CURRENT
+    // ===================================================
+
+    const benchmarkDay =
+        currentDay(latestDate);
+
+    const current = {
+
+        top10: {
+            entry: dailyPerMember(
+                entry(latestSnapshot, 10).fans,
+                benchmarkDay
+            ),
+            average: dailyPerMember(
+                average(
+                    latestSnapshot.filter(
+                        c => c.rank >= 1 && c.rank <= 10
+                    )
+                ),
+                benchmarkDay
+            )
+        },
+
+        top30: {
+            entry: dailyPerMember(
+                entry(latestSnapshot, 30).fans,
+                benchmarkDay
+            ),
+            average: dailyPerMember(
+                average(
+                    latestSnapshot.filter(
+                        c => c.rank >= 11 && c.rank <= 30
+                    )
+                ),
+                benchmarkDay
+            )
+        },
+
+        top100: {
+            entry: dailyPerMember(
+                entry(latestSnapshot, 100).fans,
+                benchmarkDay
+            ),
+            average: dailyPerMember(
+                average(
+                    latestSnapshot.filter(
+                        c => c.rank >= 31 && c.rank <= 100
+                    )
+                ),
+                benchmarkDay
+            )
+        }
+
+    };
+
+    // ===================================================
+    // CHART
+    // ===================================================
+
+    const firstSnapshot =
+        byDate[snapshotDates[0]];
+
+    const chart = [];
+
+    // Day 1 is measured from a zero baseline (monthly fan reset).
+    chart.push({
+        day: 1,
+        top10: Math.round(
+            entry(firstSnapshot, 10).fans /
+            MEMBERS_PER_BENCHMARK
+        ),
+        top30: Math.round(
+            entry(firstSnapshot, 30).fans /
+            MEMBERS_PER_BENCHMARK
+        ),
+        top100: Math.round(
+            entry(firstSnapshot, 100).fans /
+            MEMBERS_PER_BENCHMARK
+        ),
+        first: hasClub
+            ? clubFansByDate[snapshotDates[0]] != null
+                ? Math.round(
+                    clubFansByDate[snapshotDates[0]] /
+                    MEMBERS_PER_BENCHMARK
+                )
+                : null
+            : null
+    });
+
+    for (
+        let i = 1;
+        i < snapshotDates.length;
+        i++
+    ) {
+
+        const currentSnapshot =
+            byDate[snapshotDates[i]];
+
+        const previousSnapshot =
+            byDate[snapshotDates[i - 1]];
+
+        const currentFans =
+            clubFansByDate[snapshotDates[i]];
+
+        const previousFans =
+            clubFansByDate[snapshotDates[i - 1]];
+
+        chart.push({
+
+            day: i + 1,
+
+            top10: Math.round(
+                (
+                    entry(currentSnapshot, 10).fans -
+                    entry(previousSnapshot, 10).fans
+                ) / MEMBERS_PER_BENCHMARK
+            ),
+
+            top30: Math.round(
+                (
+                    entry(currentSnapshot, 30).fans -
+                    entry(previousSnapshot, 30).fans
+                ) / MEMBERS_PER_BENCHMARK
+            ),
+
+            top100: Math.round(
+                (
+                    entry(currentSnapshot, 100).fans -
+                    entry(previousSnapshot, 100).fans
+                ) / MEMBERS_PER_BENCHMARK
+            ),
+
+            // Missing club snapshot on either day becomes a gap so
+            // every value keeps its correct date.
+            first:
+                hasClub &&
+                currentFans != null &&
+                previousFans != null
+                    ? Math.round(
+                        (currentFans - previousFans) /
+                        MEMBERS_PER_BENCHMARK
+                    )
+                    : null
+
+        });
+
+    }
+
+    // ===================================================
+    // FIRST (current row)
+    // ===================================================
+
+    if (hasClub) {
+
+        let clubLatestFans = null;
+
+        for (const date of snapshotDates) {
+
+            if (clubFansByDate[date] != null) {
+                clubLatestFans = clubFansByDate[date];
+            }
+
+        }
+
+        if (clubLatestFans != null) {
+
+            const value =
+                dailyPerMember(
+                    clubLatestFans,
+                    benchmarkDay
+                );
+
+            // A single club is both the boundary and its own group,
+            // so Entry and Average are the same figure.
+            current.first = {
+                entry: value,
+                average: value
+            };
+
+        }
+
+    }
+
+    return {
+
+        snapshot_date:
+            latestDate,
+
+        snapshot_time:
+            latestSnapshot[0].snapshotTime,
+
+        current,
+
+        chart
+
+    };
 
 }
 
@@ -264,18 +479,18 @@ module.exports = {
 
     CLUB_FIRST_NAME,
 
-    toJakartaDate,
+    entry,
 
-    getMonthRange,
-
-    buildClubDailyGrowth,
-
-    mergeClubGrowthIntoChart,
+    average,
 
     dailyPerMember,
 
-    buildClubBenchmarkRow,
+    snapshotIsoDate,
 
-    getLatestSnapshot
+    currentDay,
+
+    chartDay,
+
+    calculateBenchmark
 
 };

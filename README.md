@@ -44,6 +44,62 @@ The Trainer Timer is a 50-minute timer board. It has **no fixed/configured locat
 2. In the channel or thread where you want the board, run `/timer-board`.
 3. Users start their own timer by clicking the `Start` button on the board.
 
+## Trainer Registration (`/register`)
+
+`/register <trainer_id>` links a Discord account to a member's **permanent**
+in-game Trainer ID (`viewer_id`). This is the foundation for the future
+automatic quota reminder system — reminders themselves are not implemented yet.
+
+### Identity mapping
+
+The mapping is `Discord User ID <-> viewer_id`. IGN / trainer name is **not**
+stored, because it can change; `viewer_id` is permanent.
+
+`discord_username` is also stored, but **only** for display/management
+convenience — it is never used as an identifier, since Discord usernames can
+change. It is read automatically from `interaction.user` and refreshed on every
+`/register`; the user never types it.
+
+```text
+Discord User ID:  123456789
+discord_username: Khazella            <- display only, refreshed on each /register
+viewer_id:        612906794711
+IGN:              ExampleTrainer      <- not used for the mapping
+```
+
+### Behavior
+
+- `/register 612906794711` reads the Discord User ID from the interaction and
+  treats the argument as `viewer_id`.
+- The `viewer_id` is validated against the **current Club First member data**
+  (the same `uma_circle_latest` feed the bot refreshes roughly every 15
+  minutes). Members who leave/quit/get kicked are removed from that data.
+- One row per Discord user (re-registering updates the existing row) and one
+  Discord user per `viewer_id`.
+- The reply is ephemeral so registration details stay private.
+- Registrations are permanent: they are **not** deleted when a member leaves
+  Club First. Current Club First membership only determines reminder
+  eligibility, so a member who leaves and later rejoins with the same
+  `viewer_id` keeps their registration.
+
+### Database
+
+The mapping is stored in `discord_registrations` (created automatically at
+startup and before each registration). See
+`services/database/schema/registration.sql` for the canonical schema.
+
+Columns: `id`, `discord_user_id` (unique identity key), `discord_username`
+(nullable, display only), `viewer_id` (unique), `created_at`, `updated_at`.
+
+For older databases created before `discord_username` existed, an idempotent
+`ALTER TABLE ... ADD COLUMN IF NOT EXISTS discord_username TEXT` migration runs
+automatically; existing registrations are preserved and their username is
+backfilled the next time that Discord user runs `/register`.
+
+### Deploying the command
+
+Run `node src/deploy-commands.js` to register `/register` with Discord.
+
 ## Notes
 
 * Environment variables are stored in `.env` and are not included in the repository.

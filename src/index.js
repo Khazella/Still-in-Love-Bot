@@ -21,6 +21,9 @@ const {
 const timerManager =
     require('../services/trainer-timer/timer-manager');
 
+const clubReportAutomation =
+    require('../services/automation/club-report-automation');
+
 const skillsDb =
     require('../services/database/skills');
 
@@ -72,6 +75,14 @@ client.once('clientReady', async () => {
     timerManager.init(client)
         .catch(error => {
             logger.error('Trainer Timer init', error);
+        });
+
+    // Hourly Club Report automation. Initializes exactly once (guarded
+    // singleton) and only waits for the next HH:01 WIB — it never posts on
+    // startup. Missing BOT_AUTOMATION_CHANNEL_ID disables it without crashing.
+    clubReportAutomation.init(client)
+        .catch(error => {
+            logger.error('Automation Club Report init', error);
         });
 });
 

@@ -18,9 +18,6 @@ const {
     renderTemplate
 } = require('../services/renderer');
 
-const clubDb =
-    require('../services/database/club');
-
 const trainerDb =
     require('../services/database/trainer');
 
@@ -34,11 +31,9 @@ const {
     calculateBenchmark
 } = require('../services/calculations/benchmark');
 
-const weeklyFans =
-    require('../services/club-report/weekly');
-
-const monthlyFans =
-    require('../services/club-report/monthly');
+const {
+    generateClubReport
+} = require('../services/club-report/generate');
 
 const weeklyTrainer =
     require('../services/trainer/weekly');
@@ -137,61 +132,17 @@ async function handleLocalCommand(
         'club-report'
     ) {
 
-        const source =
-            options.source || 'uma';
-
-        const latest =
-            await clubDb.getLatestClubData(
-                source
-            );
-
-        latest.source =
-            source === 'chrono'
-                ? 'chronogenesis.net'
-                : 'uma.moe';
-
-        const settings =
-            await clubSettingsDb.getClubSettings(
-                options.club
-            );
-
-        // =========================
-        // GENERATE REPORT
-        // =========================
-
-        const period =
-            options.period;
-
-        const t1 = Date.now();
-
-        const report =
-            period === 'monthly'
-                ? monthlyFans.generateMonthlyReport(
-                    latest,
-                    settings
-                )
-                : weeklyFans.generateWeeklyReport(
-                    latest,
-                    settings,
-                    period
-                );
-
-        const serviceName =
-            period === 'monthly'
-                ? 'club-report.generateMonthlyReport()'
-                : 'club-report.generateWeeklyReport()';
-
-        logger.service(serviceName, Date.now() - t1);
-
-        const t2 = Date.now();
-
-        const imageBuffer =
-            await renderTemplate(
-                'club',
-                report
-            );
-
-        logger.render('renderTemplate("club")', Date.now() - t2);
+        // REPORT GENERATION IS SHARED.
+        //
+        // Both this manual command and the hourly automation call the exact
+        // same generator (services/club-report/generate.js), so the two can
+        // never diverge. The manual command's output is unchanged.
+        const { imageBuffer } =
+            await generateClubReport({
+                club: options.club,
+                period: options.period,
+                source: options.source || 'uma'
+            });
 
         const attachment =
             new AttachmentBuilder(
